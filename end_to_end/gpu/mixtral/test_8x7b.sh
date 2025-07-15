@@ -3,6 +3,10 @@
 set -ex
 
 BASE_OUTPUT_PATH=gs://ai2-olmax-testing/$(date +%Y-%m-%d)
+export DATASET_PATH=gs://allennlp-tensorflow-datasets
+
+export GOOGLE_APPLICATION_CREDENTIALS="$HOME/google_creds.json"
+echo "$GOOGLE_CREDENTIALS" >> "$GOOGLE_APPLICATION_CREDENTIALS"
 
 # `SCANNED_CHECKPOINT` refers to the checkpoint that used for both `train.py` and `decode.py` 
 # if [ -z "${SCANNED_CHECKPOINT}" ]; then
@@ -18,7 +22,6 @@ BASE_OUTPUT_PATH=gs://ai2-olmax-testing/$(date +%Y-%m-%d)
 #     echo "UNSCANNED_CKPT_PATH is not set, using BASE_OUTPUT_PATH = ${UNSCANNED_CKPT_PATH}"
 # fi
 
-export DATASET_PATH=gs://allennlp-tensorflow-datasets
 
 # Run pre-training - dropping implementation
 python3 -m MaxText.train MaxText/configs/base.yml model_name=mixtral-8x7b hardware=gpu \
