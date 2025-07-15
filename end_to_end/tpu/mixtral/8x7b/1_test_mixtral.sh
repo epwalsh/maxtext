@@ -15,7 +15,7 @@ BASE_OUTPUT_PATH=gs://ai2-olmax-testing/$(date +%Y-%m-%d)
 
 # Download checkpoint
 # python3 -m pip install torch
-MODEL_NAME="mixtral-8x7B-v0.1-Instruct"
+MODEL_NAME="Mixtral-8x7B-v0.1-Instruct"
 PARAM_DIR="/tmp/maxtext"
 mkdir -p "$PARAM_DIR"
 # [[ ! -z $(ls "$PARAM_DIR") ]] && fusermount -u "$PARAM_DIR"
