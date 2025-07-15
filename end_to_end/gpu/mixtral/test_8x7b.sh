@@ -2,7 +2,7 @@
 
 set -ex
 
-BASE_OUTPUT_PATH=gs://ai2-olmax-testing/$(date +%Y-%m-%d)
+BASE_OUTPUT_PATH=gs://allennlp-petew/$(date +%Y-%m-%d)
 export DATASET_PATH=gs://allennlp-tensorflow-datasets
 
 export GOOGLE_APPLICATION_CREDENTIALS="$HOME/google_creds.json"
