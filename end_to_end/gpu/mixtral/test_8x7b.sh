@@ -18,7 +18,7 @@ BASE_OUTPUT_PATH=gs://ai2-olmax-testing/$(date +%Y-%m-%d)
 #     echo "UNSCANNED_CKPT_PATH is not set, using BASE_OUTPUT_PATH = ${UNSCANNED_CKPT_PATH}"
 # fi
 
-export DATASET_PATH=gs://maxtext-dataset
+export DATASET_PATH=gs://allennlp-tensorflow-datasets
 
 # Run pre-training - dropping implementation
 python3 -m MaxText.train MaxText/configs/base.yml model_name=mixtral-8x7b hardware=gpu \
