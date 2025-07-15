@@ -22,6 +22,7 @@ export DATASET_PATH=gs://allennlp-tensorflow-datasets
 
 # Run pre-training - dropping implementation
 python3 -m MaxText.train MaxText/configs/base.yml model_name=mixtral-8x7b hardware=gpu \
+    dataset_type=synthetic \
     base_output_directory=${BASE_OUTPUT_PATH} dataset_path=${DATASET_PATH} \
     run_name=dropping_pre_training async_checkpointing=false \
     attention=cudnn_flash_te capacity_factor=1.25 dtype=bfloat16 \
