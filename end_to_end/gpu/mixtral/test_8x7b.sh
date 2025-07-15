@@ -2,25 +2,21 @@
 
 set -ex
 
-if [ -z "${BASE_OUTPUT_PATH}" ]; then
-    # Non-Googlers please remember to point BASE_OUTPUT_PATH to GCS buckets that you own, this script uses internal buckets for testing.
-    export BASE_OUTPUT_PATH=gs://runner-maxtext-logs/$(date +%Y-%m-%d)
-    echo "BASE_OUTPUT_PATH is not set, using BASE_OUTPUT_PATH = ${BASE_OUTPUT_PATH}"
-fi
+BASE_OUTPUT_PATH=gs://ai2-olmax-testing/$(date +%Y-%m-%d)
 
 # `SCANNED_CHECKPOINT` refers to the checkpoint that used for both `train.py` and `decode.py` 
-if [ -z "${SCANNED_CHECKPOINT}" ]; then
-    # Non-Googlers please remember to point SCANNED_CHECKPOINT to GCS buckets that you own
-    export SCANNED_CHECKPOINT=${BASE_OUTPUT_PATH}/8x7/scanned_ckpt/0/items
-    echo "SCANNED_CHECKPOINT is not set, using BASE_OUTPUT_PATH = ${SCANNED_CHECKPOINT}"
-fi
+# if [ -z "${SCANNED_CHECKPOINT}" ]; then
+#     # Non-Googlers please remember to point SCANNED_CHECKPOINT to GCS buckets that you own
+#     export SCANNED_CHECKPOINT=${BASE_OUTPUT_PATH}/8x7/scanned_ckpt/0/items
+#     echo "SCANNED_CHECKPOINT is not set, using BASE_OUTPUT_PATH = ${SCANNED_CHECKPOINT}"
+# fi
 
 # `UNSCANNED_CHECKPOINT` refers to run decoding
-if [ -z "${UNSCANNED_CKPT_PATH}" ]; then
-    # Non-Googlers please remember to point UNSCANNED_CKPT_PATH to GCS buckets that you own
-    export UNSCANNED_CKPT_PATH=${BASE_OUTPUT_PATH}/unscanned_ckpt/checkpoints/0/items
-    echo "UNSCANNED_CKPT_PATH is not set, using BASE_OUTPUT_PATH = ${UNSCANNED_CKPT_PATH}"
-fi
+# if [ -z "${UNSCANNED_CKPT_PATH}" ]; then
+#     # Non-Googlers please remember to point UNSCANNED_CKPT_PATH to GCS buckets that you own
+#     export UNSCANNED_CKPT_PATH=${BASE_OUTPUT_PATH}/unscanned_ckpt/checkpoints/0/items
+#     echo "UNSCANNED_CKPT_PATH is not set, using BASE_OUTPUT_PATH = ${UNSCANNED_CKPT_PATH}"
+# fi
 
 export DATASET_PATH=gs://maxtext-dataset
 
@@ -36,16 +32,16 @@ python3 -m MaxText.train MaxText/configs/base.yml model_name=mixtral-8x7b hardwa
 echo "Finished pre-training"
 
 # Run fine-tuning - dropping implementation
-python3 -m MaxText.train MaxText/configs/base.yml model_name=mixtral-8x7b hardware=gpu \
-    load_parameters_path=${SCANNED_CHECKPOINT} \
-    base_output_directory=${BASE_OUTPUT_PATH} dataset_path=${DATASET_PATH} \
-    run_name=dropping_pre_training async_checkpointing=true \
-    attention=cudnn_flash_te capacity_factor=1.25 dtype=bfloat16 \
-    ici_expert_parallelism=-1 ici_fsdp_parallelism=1 \
-    max_target_length=1024 megablox=False per_device_batch_size=1 \
-    reuse_example_batch=1 steps=5 tokenizer_path=assets/tokenizer.mistral-v1 \
-    weight_dtype=bfloat16 sparse_matmul=False packing=False
-echo "Finished fine-tuning"
+# python3 -m MaxText.train MaxText/configs/base.yml model_name=mixtral-8x7b hardware=gpu \
+#     load_parameters_path=${SCANNED_CHECKPOINT} \
+#     base_output_directory=${BASE_OUTPUT_PATH} dataset_path=${DATASET_PATH} \
+#     run_name=dropping_pre_training async_checkpointing=true \
+#     attention=cudnn_flash_te capacity_factor=1.25 dtype=bfloat16 \
+#     ici_expert_parallelism=-1 ici_fsdp_parallelism=1 \
+#     max_target_length=1024 megablox=False per_device_batch_size=1 \
+#     reuse_example_batch=1 steps=5 tokenizer_path=assets/tokenizer.mistral-v1 \
+#     weight_dtype=bfloat16 sparse_matmul=False packing=False
+# echo "Finished fine-tuning"
 
 # # TODO(b/391864113): Add this once the bug is fixed
 # # Run decoding with converted ckpt - dropping implementation
