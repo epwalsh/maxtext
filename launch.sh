@@ -1,9 +1,13 @@
 #!/bin/bash
 
+set -ex
+
 gantry run \
     --show-logs \
     --yes \
     --workspace=ai2/OLMo-pretraining-stability \
+    --priority=high \
+    --allow-dirty \
     --env-secret='GOOGLE_CREDENTIALS=GOOGLE_CREDENTIALS' \
     --beaker-image=petew/olmax \
     --system-python \
