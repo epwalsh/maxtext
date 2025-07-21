@@ -6,6 +6,8 @@ gantry run \
     --show-logs \
     --yes \
     --workspace=ai2/OLMo-pretraining-stability \
+    --group=petew/B200_benchmarks \
+    --group=petew/B200_benchmarks_mixtral \
     --priority=high \
     --allow-dirty \
     --env-secret='GOOGLE_CREDENTIALS=GOOGLE_CREDENTIALS' \
