@@ -33,7 +33,7 @@ python3 -m MaxText.train MaxText/configs/base.yml model_name=mixtral-8x7b hardwa
     max_target_length=8192 megablox=False per_device_batch_size=1 \
     reuse_example_batch=1 steps=100 tokenizer_path=assets/tokenizer.mistral-v1 \
     weight_dtype=bfloat16 sparse_matmul=False packing=False \
-    quantization=bfloat16 remat_policy=minimal
+    remat_policy=minimal
 echo "Finished pre-training"
 
 # Run fine-tuning - dropping implementation
