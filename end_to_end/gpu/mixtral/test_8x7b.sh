@@ -18,7 +18,7 @@ export XLA_FLAGS="--xla_gpu_enable_latency_hiding_scheduler=true
  --xla_gpu_enable_pipelined_reduce_scatter=true --xla_gpu_enable_pipelined_all_reduce=true
  --xla_gpu_enable_while_loop_double_buffering=true
  --xla_gpu_enable_all_gather_combine_by_dim=false
- --xla_gpu_enable_reduce_scatter_combine_by_dim=false"
+ --xla_gpu_enable_reduce_scatter_combine_by_dim=false --xla_disable_hlo_passes=rematerialization"
 
 # `SCANNED_CHECKPOINT` refers to the checkpoint that used for both `train.py` and `decode.py` 
 # if [ -z "${SCANNED_CHECKPOINT}" ]; then
@@ -41,7 +41,7 @@ python3 -m MaxText.train MaxText/configs/base.yml model_name=mixtral-8x7b hardwa
     base_output_directory=${BASE_OUTPUT_PATH} dataset_path=${DATASET_PATH} \
     run_name="dropping_pre_training_$(date '+%H%M%S')" async_checkpointing=false \
     attention=cudnn_flash_te capacity_factor=1.25 dtype=bfloat16 \
-    enable_checkpointing=false ici_expert_parallelism=1 ici_fsdp_parallelism=-1 \
+    enable_checkpointing=false ici_expert_parallelism=-1 ici_fsdp_parallelism=1 \
     max_target_length=8192 megablox=False per_device_batch_size=1 \
     reuse_example_batch=1 steps=100 tokenizer_path=assets/tokenizer.mistral-v1 \
     weight_dtype=bfloat16 sparse_matmul=False packing=False \
