@@ -8,7 +8,7 @@ export DATASET_PATH=gs://allennlp-tensorflow-datasets
 export GOOGLE_APPLICATION_CREDENTIALS="$HOME/google_creds.json"
 echo "$GOOGLE_CREDENTIALS" >> "$GOOGLE_APPLICATION_CREDENTIALS"
 
-export XLA_PYTHON_CLIENT_MEM_FRACTION=0.95
+#export XLA_PYTHON_CLIENT_MEM_FRACTION=0.95
 
 # `SCANNED_CHECKPOINT` refers to the checkpoint that used for both `train.py` and `decode.py` 
 # if [ -z "${SCANNED_CHECKPOINT}" ]; then
