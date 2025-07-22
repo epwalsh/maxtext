@@ -8,8 +8,7 @@ export DATASET_PATH=gs://allennlp-tensorflow-datasets
 export GOOGLE_APPLICATION_CREDENTIALS="$HOME/google_creds.json"
 echo "$GOOGLE_CREDENTIALS" >> "$GOOGLE_APPLICATION_CREDENTIALS"
 
-#export XLA_PYTHON_CLIENT_MEM_FRACTION=0.95
-
+export XLA_PYTHON_CLIENT_MEM_FRACTION=0.95
 export XLA_FLAGS="--xla_gpu_enable_latency_hiding_scheduler=true
  --xla_gpu_enable_triton_gemm=false
  --xla_gpu_graph_level=0 --xla_gpu_enable_highest_priority_async_stream=true
@@ -42,7 +41,7 @@ python3 -m MaxText.train MaxText/configs/base.yml model_name=mixtral-8x7b hardwa
     run_name="dropping_pre_training_$(date '+%H%M%S')" async_checkpointing=false \
     attention=cudnn_flash_te capacity_factor=1.25 dtype=bfloat16 \
     enable_checkpointing=false ici_expert_parallelism=-1 ici_fsdp_parallelism=1 \
-    max_target_length=8192 megablox=False per_device_batch_size=1 \
+    max_target_length=8192 megablox=False per_device_batch_size=2 \
     reuse_example_batch=1 steps=100 tokenizer_path=assets/tokenizer.mistral-v1 \
     weight_dtype=bfloat16 sparse_matmul=False packing=False \
     remat_policy=minimal quantization=fp8
