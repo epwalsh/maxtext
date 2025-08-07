@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -ex
+set -e
 
 BASE_OUTPUT_PATH=gs://allennlp-petew/$(date +%Y-%m-%d-%H%M%S)
 export DATASET_PATH=gs://allennlp-tensorflow-datasets
