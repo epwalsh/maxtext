@@ -19,6 +19,9 @@ export XLA_FLAGS="--xla_gpu_enable_latency_hiding_scheduler=true
  --xla_gpu_enable_all_gather_combine_by_dim=false
  --xla_gpu_enable_reduce_scatter_combine_by_dim=false --xla_disable_hlo_passes=rematerialization"
 
+export CUDA_DEVICE_MAX_CONNECTIONS=1
+export NVTE_FUSED_ATTN=1
+
 # `SCANNED_CHECKPOINT` refers to the checkpoint that used for both `train.py` and `decode.py` 
 # if [ -z "${SCANNED_CHECKPOINT}" ]; then
 #     # Non-Googlers please remember to point SCANNED_CHECKPOINT to GCS buckets that you own
@@ -32,7 +35,6 @@ export XLA_FLAGS="--xla_gpu_enable_latency_hiding_scheduler=true
 #     export UNSCANNED_CKPT_PATH=${BASE_OUTPUT_PATH}/unscanned_ckpt/checkpoints/0/items
 #     echo "UNSCANNED_CKPT_PATH is not set, using BASE_OUTPUT_PATH = ${UNSCANNED_CKPT_PATH}"
 # fi
-
 
 # Run pre-training - dropping implementation
 python3 -m MaxText.train MaxText/configs/base.yml model_name=mixtral-8x7b hardware=gpu \
