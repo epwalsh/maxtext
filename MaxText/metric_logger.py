@@ -59,6 +59,14 @@ class MetricLogger:
     self.cumulative_eval_metrics = {"scalar": defaultdict(float)}
     self.buffered_train_metrics = None
 
+    self.beaker = None
+    self.workload = None
+    if os.environ.get("BEAKER_TOKEN") and (workload_id := os.environ.get("BEAKER_WORKLOAD_ID")) is not None:
+      from beaker import Beaker
+
+      self.beaker = Beaker.from_env()
+      self.workload = self.beaker.workload.get(workload_id)
+
   def write_metrics(self, metrics, step, is_training=True):
     """Entry point for all metrics writing in Train's Main."""
     if metrics:
@@ -92,6 +100,11 @@ class MetricLogger:
         log_message += f", main_model_loss: {main_model_loss:.3f}, mtp_loss: {mtp_loss:.3f}"
 
       max_logging.log(log_message)
+      if self.beaker is not None and self.workload is not None:
+        self.beaker.workload.update(
+          self.workload,
+          description=f"{self.workload.experiment.description} ({int(metrics['scalar']['perf/per_device_tokens_per_sec']):,d} TPS)",
+        )
 
     else:
       log_message = (
@@ -253,3 +266,5 @@ class MetricLogger:
       self.write_metrics(metrics_to_write, step_to_write)
 
     max_utils.close_summary_writer(self.writer)
+    if self.beaker is not None:
+      self.beaker.close()
