@@ -25,11 +25,11 @@ export XLA_FLAGS="--xla_gpu_enable_latency_hiding_scheduler=true
  --xla_gpu_enable_reduce_scatter_combine_by_dim=false
  --xla_disable_hlo_passes=rematerialization"
 
-export CUDA_DEVICE_MAX_CONNECTIONS=8
+export CUDA_DEVICE_MAX_CONNECTIONS=1
 export NVTE_FUSED_ATTN=1
-export NCCL_ALGO=Tree,Ring
-export JAX_ENABLE_PGLE=false
-export JAX_REMOVE_CUSTOM_PARTITIONING_PTR_FROM_CACHE_KEY=true
+# export NCCL_ALGO=Tree,Ring
+# export JAX_ENABLE_PGLE=false
+# export JAX_REMOVE_CUSTOM_PARTITIONING_PTR_FROM_CACHE_KEY=true
 
 # `SCANNED_CHECKPOINT` refers to the checkpoint that used for both `train.py` and `decode.py` 
 # if [ -z "${SCANNED_CHECKPOINT}" ]; then
