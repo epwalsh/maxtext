@@ -21,6 +21,7 @@ limitations under the License.
 # See github.com/google/maxtext/issues/20 for more
 
 from typing import Any, Sequence, Tuple
+import gc
 import datetime
 import functools
 import os
@@ -737,4 +738,5 @@ def main(argv: Sequence[str]) -> None:
 
 
 if __name__ == "__main__":
+  gc.disable()
   app.run(main)
