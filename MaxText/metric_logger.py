@@ -24,6 +24,7 @@ import queue
 
 import numpy as np
 import gantry.api
+from beaker import Beaker
 
 import jax
 
@@ -61,8 +62,10 @@ class MetricLogger:
     self.buffered_train_metrics = None
 
     self.running_in_beaker = False
+    self.beaker = None
     if os.environ.get("BEAKER_TOKEN") and os.environ.get("BEAKER_WORKLOAD_ID") is not None:
       self.running_in_beaker = True
+      self.beaker = Beaker.from_env(check_for_upgrades=False)
 
   def write_metrics(self, metrics, step, is_training=True):
     """Entry point for all metrics writing in Train's Main."""
@@ -82,15 +85,17 @@ class MetricLogger:
         self.write_metrics_to_beaker(metrics, step, is_training)
 
   def write_metrics_to_beaker(self, metrics, step, is_training):
-      if is_training and (step + 1) % 10 == 0:
-        gantry.api.update_workload_description(
-          f"({int(metrics['scalar']['perf/per_device_tokens_per_sec']):,d} TPS)",
-          "append",
-        )
-        gantry.api.write_metrics({
-          "TPS": int(metrics["scalar"]["perf/per_device_tokens_per_sec"]),
-          "loss": float(metrics['scalar']['learning/loss']),
-        })
+    assert self.beaker is not None
+    if is_training and (step + 1) % 10 == 0:
+      gantry.api.update_workload_description(
+        f"({int(metrics['scalar']['perf/per_device_tokens_per_sec']):,d} TPS)",
+        "append",
+        client=self.beaker,
+      )
+      gantry.api.write_metrics({
+        "TPS": int(metrics["scalar"]["perf/per_device_tokens_per_sec"]),
+        "loss": float(metrics['scalar']['learning/loss']),
+      })
 
   def log_metrics(self, metrics, step, is_training):
     """Logs metrics via max_logging."""
@@ -272,3 +277,6 @@ class MetricLogger:
       self.write_metrics(metrics_to_write, step_to_write)
 
     max_utils.close_summary_writer(self.writer)
+    if self.beaker is not None:
+      self.beaker.close()
+      self.beaker = None
