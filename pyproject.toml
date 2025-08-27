@@ -32,3 +32,7 @@ dependencies = {file = ["requirements.txt"]}
 where = ["MaxText"]
 include = ["MaxText*"]
 exclude = ["MaxText.tests.*"]
+
+[tool.gantry]
+workspace = "ai2/google_benchmarks"
+budget = "ai2/oe-base"
