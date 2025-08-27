@@ -42,4 +42,4 @@ jsonlines
 pathwaysutils==0.1.1
 omegaconf
 beaker-py>=2.0
-beaker-gantry>=3.2
+beaker-gantry>=3.3.0.dev20250827

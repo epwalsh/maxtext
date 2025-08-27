@@ -82,8 +82,7 @@ class MetricLogger:
         self.write_metrics_to_beaker(metrics, step, is_training)
 
   def write_metrics_to_beaker(self, metrics, step, is_training):
-      del step
-      if is_training:
+      if is_training and (step + 1) % 10 == 0:
         gantry.api.update_workload_description(
           f"({int(metrics['scalar']['perf/per_device_tokens_per_sec']):,d} TPS)",
           "append",
