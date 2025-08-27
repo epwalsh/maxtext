@@ -89,7 +89,7 @@ class MetricLogger:
           "append",
         )
         gantry.api.write_metrics({
-          "TPS": metrics["scalar"]["perf/per_device_tokens_per_sec"],
+          "TPS": int(metrics["scalar"]["perf/per_device_tokens_per_sec"]),
           "loss": float(metrics['scalar']['learning/loss']),
         })
 
