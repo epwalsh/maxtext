@@ -273,5 +273,3 @@ class MetricLogger:
       self.write_metrics(metrics_to_write, step_to_write)
 
     max_utils.close_summary_writer(self.writer)
-    if self.beaker is not None:
-      self.beaker.close()

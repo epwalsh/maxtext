@@ -20,6 +20,7 @@ gantry run \
     --group=petew/B200_benchmarks \
     --group=petew/B200_benchmarks_mixtral \
     --priority=urgent \
+    --task-timeout=20m \
     --env-secret='GOOGLE_CREDENTIALS=GOOGLE_CREDENTIALS' \
     --env-secret='BEAKER_TOKEN' \
     --beaker-image=petew/olmax \
