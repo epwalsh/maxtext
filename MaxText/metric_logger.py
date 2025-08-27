@@ -88,7 +88,10 @@ class MetricLogger:
           f"({int(metrics['scalar']['perf/per_device_tokens_per_sec']):,d} TPS)",
           "append",
         )
-        gantry.api.write_metrics(metrics["scalar"])
+        gantry.api.write_metrics({
+          "TPS": metrics["scalar"]["perf/per_device_tokens_per_sec"],
+          "loss": float(metrics['scalar']['learning/loss']),
+        })
 
   def log_metrics(self, metrics, step, is_training):
     """Logs metrics via max_logging."""
