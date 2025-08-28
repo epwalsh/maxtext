@@ -19,6 +19,7 @@ gantry run \
     --description="MaxText ${name}" \
     --group=petew/B200_benchmarks \
     --group=petew/B200_benchmarks_mixtral \
+    --group=petew/B200_benchmarks_mixtral_8k \
     --priority=urgent \
     --task-timeout=20m \
     --env-secret='GOOGLE_CREDENTIALS=GOOGLE_CREDENTIALS' \

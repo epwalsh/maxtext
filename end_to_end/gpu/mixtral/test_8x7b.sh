@@ -59,7 +59,7 @@ python3 -m MaxText.train MaxText/configs/base.yml model_name=mixtral-8x7b hardwa
     ici_expert_parallelism=-1 \
     ici_fsdp_parallelism=1 \
     max_target_length=8192 \
-    per_device_batch_size=8 \
+    per_device_batch_size=4 \
     megablox=False \
     reuse_example_batch=1 \
     steps=100 \
@@ -67,8 +67,10 @@ python3 -m MaxText.train MaxText/configs/base.yml model_name=mixtral-8x7b hardwa
     weight_dtype=bfloat16 \
     sparse_matmul=False \
     packing=False \
-    remat_policy=minimal \
-    quantization=fp8
+    remat_policy=minimal
+
+    # quantization=fp8
+
 echo "Finished pre-training"
 
 # Run fine-tuning - dropping implementation
