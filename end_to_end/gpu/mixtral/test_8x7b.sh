@@ -48,8 +48,8 @@ export JAX_REMOVE_CUSTOM_PARTITIONING_PTR_FROM_CACHE_KEY=true
 # Run pre-training - dropping implementation
 python3 -m MaxText.train MaxText/configs/base.yml model_name=mixtral-8x7b hardware=gpu \
     dataset_type=synthetic \
-    base_output_directory=${BASE_OUTPUT_PATH} \
-    dataset_path=${DATASET_PATH} \
+    base_output_directory="${BASE_OUTPUT_PATH}" \
+    dataset_path="${DATASET_PATH}" \
     run_name="dropping_pre_training_$(date '+%H%M%S')" \
     async_checkpointing=false \
     attention=cudnn_flash_te \
@@ -59,7 +59,7 @@ python3 -m MaxText.train MaxText/configs/base.yml model_name=mixtral-8x7b hardwa
     ici_expert_parallelism=-1 \
     ici_fsdp_parallelism=1 \
     max_target_length=4096 \
-    per_device_batch_size=8 \
+    per_device_batch_size=16 \
     megablox=False \
     reuse_example_batch=1 \
     steps=100 \
