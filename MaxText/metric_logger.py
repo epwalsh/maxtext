@@ -45,6 +45,44 @@ def _prepare_metrics_for_json(metrics, step, run_name):
   metrics_dict["run_name"] = run_name
   return metrics_dict
 
+class RunningAverage:
+  """
+  Computes an online running average (and variance) using Welford's algorithm.
+  """
+
+  def __init__(self):
+    self.mean = 0.0
+    self.m2 = 0.0
+    self.count = 0
+
+  def update(self, value: float) -> float:
+    delta = value - self.mean
+    self.mean += delta / (self.count + 1)
+    delta2 = value - self.mean
+    self.m2 += delta * delta2
+    self.count += 1
+    return self.mean
+
+  def get(self) -> float:
+    if self.count == 0:
+        raise ZeroDivisionError
+    return self.mean
+
+  def get_variance(self) -> float:
+    if self.count < 2:
+        raise ZeroDivisionError
+    return self.m2 / self.count
+
+  def get_sample_variance(self) -> float:
+    if self.count < 2:
+        raise ZeroDivisionError
+    return self.m2 / (self.count - 1)
+
+  def reset(self):
+    self.mean = 0.0
+    self.m2 = 0.0
+    self.count = 0
+
 
 class MetricLogger:
   """
@@ -60,7 +98,7 @@ class MetricLogger:
     self.learning_rate_schedule = learning_rate_schedule
     self.cumulative_eval_metrics = {"scalar": defaultdict(float)}
     self.buffered_train_metrics = None
-
+    self.tps_running_average = RunningAverage()
     self.running_in_beaker = False
     self.beaker = None
     if os.environ.get("BEAKER_TOKEN") and os.environ.get("BEAKER_WORKLOAD_ID") is not None:
@@ -70,6 +108,10 @@ class MetricLogger:
   def write_metrics(self, metrics, step, is_training=True):
     """Entry point for all metrics writing in Train's Main."""
     if metrics:
+      if is_training and step + 1 >= 20:
+        tps_avg = self.tps_running_average.update(float(metrics['scalar']['perf/per_device_tokens_per_sec']))
+        metrics["scalar"]['perf/per_device_tokens_per_sec_avg'] = tps_avg
+
       self.log_metrics(metrics, step, is_training)
 
       if self.config.enable_tensorboard:
@@ -86,14 +128,14 @@ class MetricLogger:
 
   def write_metrics_to_beaker(self, metrics, step, is_training):
     assert self.beaker is not None
-    if is_training and (step + 1) % 10 == 0:
+    if is_training and (step + 1) % 10 == 0 and "perf/per_device_tokens_per_sec_avg" in metrics["scalar"]:
       gantry.api.update_workload_description(
-        f"({int(metrics['scalar']['perf/per_device_tokens_per_sec']):,d} TPS)",
+        f"({int(metrics['scalar']['perf/per_device_tokens_per_sec_avg']):,d} TPS)",
         "append",
         client=self.beaker,
       )
       gantry.api.write_metrics({
-        "TPS": int(metrics["scalar"]["perf/per_device_tokens_per_sec"]),
+        "TPS": int(metrics["scalar"]["perf/per_device_tokens_per_sec_avg"]),
         "loss": float(metrics['scalar']['learning/loss']),
       })
 
