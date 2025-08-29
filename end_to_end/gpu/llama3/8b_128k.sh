@@ -65,8 +65,7 @@ python3 -m MaxText.train MaxText/configs/base.yml \
     sparse_matmul=False \
     packing=False \
     remat_policy=custom \
-    context=device
-
-    # quantization=fp8
+    context=device \
+    quantization=fp8
 
 echo "Finished pre-training"
