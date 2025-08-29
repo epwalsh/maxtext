@@ -51,6 +51,7 @@ python3 -m MaxText.train MaxText/configs/base.yml model_name=mixtral-8x7b hardwa
     base_output_directory="${BASE_OUTPUT_PATH}" \
     dataset_path="${DATASET_PATH}" \
     run_name="dropping_pre_training_$(date '+%H%M%S')" \
+    enable_tensorboard=false \
     async_checkpointing=false \
     attention=cudnn_flash_te \
     capacity_factor=1.0 \
