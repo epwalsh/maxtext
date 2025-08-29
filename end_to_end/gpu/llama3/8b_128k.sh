@@ -64,8 +64,7 @@ python3 -m MaxText.train MaxText/configs/base.yml \
     weight_dtype=bfloat16 \
     sparse_matmul=False \
     packing=False \
-    remat_policy=custom \
-    context=device
+    remat_policy=full
 
     # quantization=fp8
 
