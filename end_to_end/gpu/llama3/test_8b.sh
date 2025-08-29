@@ -14,9 +14,9 @@ export XLA_FLAGS="--xla_gpu_enable_latency_hiding_scheduler=true
  --xla_gpu_enable_command_buffer=
  --xla_gpu_graph_level=0
  --xla_gpu_enable_highest_priority_async_stream=true
- --xla_gpu_all_reduce_combine_threshold_bytes=71303168
- --xla_gpu_all_gather_combine_threshold_bytes=536870912
- --xla_gpu_reduce_scatter_combine_threshold_bytes=134217728
+ --xla_gpu_all_reduce_combine_threshold_bytes=134217728
+ --xla_gpu_all_gather_combine_threshold_bytes=134217728
+ --xla_gpu_reduce_scatter_combine_threshold_bytes=67108864
  --xla_gpu_enable_pipelined_all_gather=true
  --xla_gpu_enable_pipelined_reduce_scatter=true
  --xla_gpu_enable_pipelined_all_reduce=true
@@ -24,6 +24,10 @@ export XLA_FLAGS="--xla_gpu_enable_latency_hiding_scheduler=true
  --xla_gpu_enable_all_gather_combine_by_dim=false
  --xla_gpu_enable_reduce_scatter_combine_by_dim=false
  --xla_disable_hlo_passes=rematerialization"
+
+# --xla_gpu_all_reduce_combine_threshold_bytes=71303168
+# --xla_gpu_all_gather_combine_threshold_bytes=536870912
+# --xla_gpu_reduce_scatter_combine_threshold_bytes=134217728
 
 export CUDA_DEVICE_MAX_CONNECTIONS=8
 export NVTE_FUSED_ATTN=1
