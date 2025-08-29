@@ -50,7 +50,7 @@ python3 -m MaxText.train MaxText/configs/base.yml \
     run_name="llama3-8b_pre_training_$(date '+%H%M%S')" \
     enable_tensorboard=false \
     async_checkpointing=false \
-    attention=cudnn_flash_te \
+    attention=cudnn_flash_jax \
     dtype=bfloat16 \
     enable_checkpointing=false \
     ici_fsdp_parallelism=-1 \
@@ -65,11 +65,7 @@ python3 -m MaxText.train MaxText/configs/base.yml \
     sparse_matmul=False \
     packing=False \
     remat_policy=custom \
-    context=device \
-    query_proj=device \
-    key_proj=device \
-    value_proj=device \
-    qkv_proj=device
+    context=device
 
     # quantization=fp8
 
