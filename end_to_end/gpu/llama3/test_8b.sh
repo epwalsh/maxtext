@@ -47,7 +47,7 @@ python3 -m MaxText.train MaxText/configs/base.yml \
     max_target_length=8192 \
     per_device_batch_size=4 \
     reuse_example_batch=1 \
-    steps=100 \
+    steps=120 \
     tokenizer_path=assets/tokenizer_llama3.tiktoken \
     tokenizer_type=tiktoken \
     weight_dtype=bfloat16 \
