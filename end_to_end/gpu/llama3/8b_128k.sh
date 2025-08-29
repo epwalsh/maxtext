@@ -69,8 +69,7 @@ python3 -m MaxText.train MaxText/configs/base.yml \
     query_proj=device \
     key_proj=device \
     value_proj=device \
-    qkv_proj=device \
-    out_proj=device
+    qkv_proj=device
 
     # quantization=fp8
 
