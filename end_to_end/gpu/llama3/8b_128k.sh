@@ -50,7 +50,7 @@ python3 -m MaxText.train MaxText/configs/base.yml \
     run_name="llama3-8b_pre_training_$(date '+%H%M%S')" \
     enable_tensorboard=false \
     async_checkpointing=false \
-    attention=cudnn_flash_jax \
+    attention=cudnn_flash_te \
     dtype=bfloat16 \
     enable_checkpointing=false \
     ici_fsdp_parallelism=-1 \
