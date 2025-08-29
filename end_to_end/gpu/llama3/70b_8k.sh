@@ -55,7 +55,7 @@ python3 -m MaxText.train MaxText/configs/base.yml \
     enable_checkpointing=false \
     ici_fsdp_parallelism=8 \
     max_target_length=8192 \
-    per_device_batch_size=1 \
+    per_device_batch_size=4 \
     reuse_example_batch=1 \
     steps=120 \
     tokenizer_path=assets/tokenizer_llama3.tiktoken \
@@ -63,7 +63,7 @@ python3 -m MaxText.train MaxText/configs/base.yml \
     weight_dtype=bfloat16 \
     sparse_matmul=False \
     packing=False \
-    remat_policy=minimal_flash
+    remat_policy=full
 
     # quantization=fp8
 
