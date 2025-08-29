@@ -53,9 +53,8 @@ python3 -m MaxText.train MaxText/configs/base.yml \
     attention=cudnn_flash_te \
     dtype=bfloat16 \
     enable_checkpointing=false \
-    ici_fsdp_parallelism=8 \
+    ici_fsdp_parallelism=-1 \
     ici_context_parallelism=8 \
-    allow_split_physical_axes=true \
     max_target_length=131072 \
     per_device_batch_size=1 \
     reuse_example_batch=1 \
@@ -65,7 +64,7 @@ python3 -m MaxText.train MaxText/configs/base.yml \
     weight_dtype=bfloat16 \
     sparse_matmul=False \
     packing=False \
-    remat_policy=minimal_flash
+    remat_policy=full
 
     # quantization=fp8
 
