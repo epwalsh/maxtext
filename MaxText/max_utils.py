@@ -1,51 +1,45 @@
-"""
-Copyright 2023 Google LLC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-     https://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
+# Copyright 2023–2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 """ Common Max Utils needed by multiple modules.
 All the functions include MaxText modules, such as Pyconfig, should be moved to MaxText utils file."""
 
+import collections
+from collections.abc import Sequence
 import functools
-import time
+from functools import partial
 import os
 import socket
 import subprocess
-import collections
-from collections.abc import Sequence
-from typing import Any, Tuple
-from functools import partial
-
-import numpy as np
-
-import jax
-import jax.numpy as jnp
-from jax.experimental import mesh_utils
-
-import flax
-
-import psutil
+import time
+from typing import Any
 
 from etils import epath
-
+import flax
+import jax
+from jax.experimental import mesh_utils
+import jax.numpy as jnp
+from MaxText import max_logging
+import numpy as np
 import orbax.checkpoint as ocp
-
+from orbax.checkpoint.experimental.emergency.multi_tier_checkpointing import initialization
+import psutil
 from tensorboardX import writer
 
-from MaxText import max_logging
-
-
+initialize_multi_tier_checkpointing = (
+    initialization.initialize_multi_tier_checkpointing
+)
 HYBRID_RING_64X4 = "hybrid_ring_64x4"
 HYBRID_RING_32X8 = "hybrid_ring_32x8"
 
@@ -79,6 +73,16 @@ def calculate_num_params_from_pytree(params):
   total_parameters = jax.tree_util.tree_reduce(lambda x, y: x + y, params_sizes)
   assert total_parameters >= 0
   return total_parameters
+
+
+def device_space():
+  """Version guard for jax.memory.Space.Device."""
+  # See b/436565838 for more.
+  if jax.__version__ >= "0.7.1":
+    return jax.memory.Space.Device  # pytype: disable=module-attr
+  else:
+    # pytype: disable=module-attr
+    return jax._src.sharding_impls.TransferToMemoryKind("device")  # pylint: disable=protected-access
 
 
 def calculate_total_params_per_chip(params):
@@ -145,23 +149,57 @@ def maybe_initialize_jax_distributed_system(raw_keys):
     # Don't initialize jax distributed with AOT compilation
     return
   if is_gpu_backend(raw_keys):
-    max_logging.log("Attempting to initialize the jax distributed system for GPU backend...")
+    max_logging.log(
+        "Attempting to initialize the jax distributed system for GPU backend..."
+    )
     initialize_jax_for_gpu(raw_keys)
     max_logging.log("Jax distributed system initialized on GPU!")
   elif is_cpu_backend(raw_keys):
-    max_logging.log("Attempting to initialize the jax distributed system for CPU backend...")
+    max_logging.log(
+        "Attempting to initialize the jax distributed system for CPU backend..."
+    )
     initialize_jax_for_cpu(raw_keys)
     max_logging.log("Jax distributed system initialized on CPUs!")
-  elif (raw_keys["enable_checkpointing"] and raw_keys["compile_topology_num_slices"] == -1) or raw_keys[
-      "hardware"
-  ] == "gpu_multiprocess":
+  elif raw_keys["enable_multi_tier_checkpointing"]:
+    max_logging.log(
+        "Attempting to initialize the jax distributed system for multi-tier "
+        "checkpointing..."
+    )
+    initialize_multi_tier_checkpointing(
+        local_checkpoint_directory=raw_keys["local_checkpoint_directory"],
+        backup_interval_minutes=raw_keys[
+            "multi_tier_checkpointing_backup_interval_minutes"
+        ],
+        run_name=raw_keys["run_name"],
+        jax_initialization_timeout_seconds=raw_keys[
+            "jax_distributed_initialization_timeout"
+        ],
+    )
+    max_logging.log(
+        "Jax distributed system initialized for multi-tier checkpointing!"
+    )
+  elif (
+      raw_keys["enable_checkpointing"]
+      and raw_keys["compile_topology_num_slices"] == -1
+  ) or raw_keys["hardware"] == "gpu_multiprocess":
     max_logging.log("Attempting to initialize the jax distributed system...")
     if not raw_keys["enable_emergency_checkpoint"]:
-      jax.distributed.initialize(initialization_timeout=raw_keys["jax_distributed_initialization_timeout"])
+      jax.distributed.initialize(
+          initialization_timeout=raw_keys[
+              "jax_distributed_initialization_timeout"
+          ]
+      )
     else:
       if raw_keys["hardware"] == "gpu_multiprocess":
-        max_logging.log("Initializing jax distribtued to support local checkpointing with GPUs...")
-        jax.distributed.initialize(initialization_timeout=raw_keys["jax_distributed_initialization_timeout"])
+        max_logging.log(
+            "Initializing jax distribtued to support local checkpointing with"
+            " GPUs..."
+        )
+        jax.distributed.initialize(
+            initialization_timeout=raw_keys[
+                "jax_distributed_initialization_timeout"
+            ]
+        )
         ocp.multihost.initialize_runtime_to_distributed_ids()
         ocp.multihost.initialize_distributed_to_device_ids()
       else:
@@ -202,39 +240,6 @@ def initialize_jax_for_cpu(raw_keys):
   )
 
 
-def _wait_for_file_to_disappear(f, timeout=300):
-  for _ in range(timeout):
-    if not f.exists():
-      return True
-    time.sleep(1)
-  return False
-
-
-def _extract_step(f):
-  # The base file name is formatted as {job_name}-s{step}-n{node_rank}-g{gpu_rank}
-  return f.rsplit("-", 3)[1][1:]
-
-
-def _block_and_proces_restore_dir(directory, timeout=300):
-  """Block until a file ending with `.restore` appears, then extract the step number and rename
-  the directory using the step number.
-  """
-  WORD = ".restore"
-  for _ in range(timeout):
-    files = os.listdir(directory)
-    for f in files:
-      if f.endswith(WORD):
-        step = _extract_step(f)
-        if step != "0":
-          os.rename(epath.Path(directory) / f, epath.Path(directory) / step)
-          max_logging.log(f"Found a restore directory at step {step} and renamed it to {epath.Path(directory) / step}.")
-        else:
-          max_logging.log("Found a restore directory at step 0, skipping renaming.")
-        return
-    time.sleep(1)
-  max_logging.log(f"{timeout} seconds have passed but no .restore file was found.")
-
-
 def initialize_jax_for_tpu_with_emergency_checkpointing(raw_keys):
   """Initialize JAX distributed runtime for TPUs when emergency checkpointing is used.
   The information required to initialize JAX distributed runtime will be written by GKE to
@@ -256,70 +261,6 @@ def initialize_jax_for_tpu_with_emergency_checkpointing(raw_keys):
 
     ocp.multihost.initialize_runtime_to_distributed_ids()
     ocp.multihost.initialize_distributed_to_device_ids()
-
-    if raw_keys["use_replicator_service"]:
-      REPLICATOR_FILE = "replicator.yaml"
-      TEMP_FILE = REPLICATOR_FILE + ".tmp"
-      replicator_file = epath.Path(raw_keys["local_checkpoint_directory"]) / REPLICATOR_FILE
-      if not _wait_for_file_to_disappear(replicator_file):
-        max_logging.log("There is existing replicator.yaml which did not disappear in time.")
-      else:
-        max_logging.log("replicator.yaml no longer exists, creating new replicator.yaml.")
-      TEMP_FILE = REPLICATOR_FILE + ".tmp"
-      temp_file = epath.Path(raw_keys["local_checkpoint_directory"]) / TEMP_FILE
-      num_slices = get_num_slices(raw_keys)
-      num_nodes = jax.process_count()
-      nodes_per_slice = num_nodes // num_slices
-      max_logging.log(f"num_slices: {num_slices}, num_nodes: {num_nodes}, nodes_per_slice: {nodes_per_slice}")
-
-      node_rank = jax._src.distributed.global_state.process_id  # pylint: disable=protected-access
-      my_process_index = jax.process_index()
-      processIndex_to_nodeRank = ocp.multihost.runtime_to_distributed_ids()
-      max_logging.log(
-          f"Mapping of IDs: jax-init-info.txt={process_id}, \
-            NodeRank={node_rank}, ProcessIndex={my_process_index}, \
-            ProcessIndex->NodeRank={processIndex_to_nodeRank}"
-      )
-
-      my_in_pipeline_index = my_process_index % nodes_per_slice
-      peer_ranks = []
-      for i in range(num_slices):
-        peer_process_index = i * nodes_per_slice + my_in_pipeline_index
-        if peer_process_index != my_process_index:
-          peer_process_rank = processIndex_to_nodeRank[peer_process_index]
-          peer_ranks.append(peer_process_rank)
-
-      max_logging.log(f"Peers for NodeRank {node_rank}: {peer_ranks}")
-
-      run_name = raw_keys["run_name"]
-      if run_name == "":
-        run_name = os.environ.get("JOBSET_NAME")  # using XPK default
-
-      replicator_yaml = f"""job-name: {run_name}
-      framework: orbax
-      assume-data-parallelism: {num_slices}
-      node-rank: {node_rank}
-      nodes: {num_nodes}
-      peer-ranks: {peer_ranks}
-      backup-interval-minutes: {raw_keys["replicator_backup_interval_minutes"]}"""
-
-      temp_file.write_text("\n".join([l.strip() for l in replicator_yaml.split("\n")]))
-      os.rename(temp_file, replicator_file)
-      if not _wait_for_file_to_disappear(replicator_file):
-        max_logging.log("The newly created replicator.yaml was not deleted in time.")
-      else:
-        max_logging.log("The newly created replicator.yaml was deleted, moving forward.")
-      _block_and_proces_restore_dir(raw_keys["local_checkpoint_directory"])
-  else:
-    max_logging.log(
-        "Initializing JAX distributed runtime without args when emergency checkpointing is"
-        " enabled. This should not happen and your workload may have unexpected behavior."
-    )
-    jax.distributed.initialize(initialization_timeout=raw_keys["jax_distributed_initialization_timeout"])
-
-    ocp.multihost.initialize_runtime_to_distributed_ids()
-    ocp.multihost.initialize_distributed_to_device_ids()
-
 
 def _retrieve_jax_init_info(raw_keys):
   """Retrieve JAX init info from a local file."""
@@ -554,7 +495,9 @@ def unbox_logicallypartioned(boxed_pytree):
 # Cross entropy implementation is taken from original T5X codebase:
 # https://github.com/google-research/t5x/blob/ace831eea1e2742b4299cd1a9af7e4f302038351/t5x/losses.py#L25-L101
 @jax.custom_vjp
-def cross_entropy_with_logits(logits: jnp.ndarray, targets: jnp.ndarray, z_loss: float) -> Tuple[jnp.ndarray, jnp.ndarray]:
+def cross_entropy_with_logits(
+    logits: jnp.ndarray, targets: jnp.ndarray, z_loss: float
+) -> tuple[jnp.ndarray, jnp.ndarray]:
   """Computes cross entropy loss with stable custom gradient.
   Computes a stabilized-gradient version of:
     -jnp.sum(targets * nn.log_softmax(logits), axis=-1)
@@ -583,9 +526,9 @@ def cross_entropy_with_logits(logits: jnp.ndarray, targets: jnp.ndarray, z_loss:
   return loss, total_z_loss
 
 
-def _cross_entropy_with_logits_fwd(logits: jnp.ndarray, targets: jnp.ndarray, z_loss: float = 0.0) -> Tuple[
-    Tuple[jnp.ndarray, jnp.ndarray],
-    Tuple[
+def _cross_entropy_with_logits_fwd(logits: jnp.ndarray, targets: jnp.ndarray, z_loss: float = 0.0) -> tuple[
+    tuple[jnp.ndarray, jnp.ndarray],
+    tuple[
         jnp.ndarray,
         jnp.ndarray,
         jnp.ndarray,
@@ -618,7 +561,7 @@ def _cross_entropy_with_logits_fwd(logits: jnp.ndarray, targets: jnp.ndarray, z_
 
 
 def _cross_entropy_with_logits_bwd(
-    res: Tuple[
+    res: tuple[
         jnp.ndarray,
         jnp.ndarray,
         jnp.ndarray,
@@ -627,8 +570,8 @@ def _cross_entropy_with_logits_bwd(
         jnp.ndarray,
         jnp.ndarray,
     ],
-    g: Tuple[jnp.ndarray, jnp.ndarray],
-) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]:
+    g: tuple[jnp.ndarray, jnp.ndarray],
+) -> tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]:
   """Backward-mode of `cross_entropy_with_logits`."""
   g = g[0]  # Ignore z_loss component as that is only used for logging.
   logits, targets, z_loss, exp_shifted, sum_exp, log_softmax, log_z = res
@@ -848,7 +791,8 @@ def reorder_causal_load_balanced(batch, cp_size):
           value,  # Pass each key's value inside batch separately
           cp_size=cp_size,
       )
-      if key in ["inputs", "targets", "inputs_position", "targets_position", "inputs_segmentation", "targets_segmentation"]
+      if key
+      in ["inputs", "targets", "inputs_position", "targets_position", "inputs_segmentation", "targets_segmentation"]
       else value
       for key, value in batch.items()
   }
@@ -916,3 +860,91 @@ def reorder_mask_load_balancing(tensor, cp_size: int, seq_dim: int):
 
   # Reshape back to original dimensions
   return reordered.reshape(ori_tensor_shape)
+
+
+def parse_custom_args(argv):
+  """Load multiple YAML config files from command line arguments."""
+  configs = []
+  current_argv = []
+  python_script = argv[0]
+  for arg in argv[1:]:
+    if arg.endswith((".yaml", ".yml")):
+      if current_argv:
+        configs.append(current_argv)
+      current_argv = [python_script, arg]
+    else:
+      current_argv.append(arg)
+  if current_argv:
+    configs.append(current_argv)
+  return configs
+
+
+def unscan_train_state_params(params, sharding, mesh, scan_axis, layer_groups):
+  """
+  Unrolls scanned parameter groups into per-layer entries.
+
+  Args:
+    train_state: training state with scanned `params`
+    mesh: the mesh to use for sharding output
+    scan_axis: axis along which scanning was applied (usually 0)
+    layer_groups: list of tuples like:
+      [("dense_layers", 4), ("moe_layers", 12)]
+  """
+  decoder = params["params"]["decoder"]
+  sharding = sharding["params"]["decoder"]
+
+  for layer_name, num_layers in layer_groups:
+    scanned_layers = decoder[layer_name]
+
+    def strip_axis(pspec):
+      return jax.sharding.PartitionSpec(*(pspec[:scan_axis] + pspec[scan_axis + 1 :]))
+
+    old_spec = jax.tree_util.tree_map(lambda x: x.spec, sharding[layer_name])
+    new_spec = jax.tree_util.tree_map(strip_axis, old_spec)
+    new_sharding = jax.tree_util.tree_map(lambda ps: jax.sharding.NamedSharding(mesh, ps), new_spec)
+
+    def slice_layer(arr, i):
+      return jax.tree_util.tree_map(lambda x: jnp.take(x, i, axis=scan_axis), arr)
+
+    p_slice_layer = jax.jit(slice_layer, out_shardings=new_sharding)
+
+    for i in range(num_layers):
+      per_layer = p_slice_layer(scanned_layers, i)
+      decoder[f"{layer_name}_{i}"] = per_layer
+
+    del decoder[layer_name]  # Free memory
+
+
+def rescan_train_state_params(params, source_shardings, scan_axis, layer_groups):
+  """
+  Reconstruct scanned layers from per-layer entries using minimal HBM.
+
+  Args:
+    train_state: training state with unrolled {layer_name}_{i} entries
+    scan_axis: axis to scan over
+    layer_groups: list of (layer_name, num_layers)
+    mesh: jax.sharding.Mesh for out_shardings
+  """
+  decoder = params["params"]["decoder"]
+  sharding = source_shardings["params"]["decoder"]
+
+  for layer_name, num_layers in layer_groups:
+
+    def stack_layers(*layers):
+      return jax.tree_util.tree_map(lambda *xs: jnp.stack(xs, axis=scan_axis), *layers)
+
+    # Create a wrapper that allows pjit + donation
+    compiled_stack = jax.jit(
+        stack_layers,
+        out_shardings=sharding[layer_name],
+        # donate_argnums=tuple(range(num_layers)),
+    )
+
+    # Collect per-layer entries for stacking
+    layer_list = [decoder.pop(f"{layer_name}_{i}") for i in range(num_layers)]
+
+    # Stack them with donation
+    scanned = compiled_stack(*layer_list)
+
+    # Store result and clear temporary memory
+    decoder[layer_name] = scanned

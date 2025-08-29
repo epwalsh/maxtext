@@ -1,16 +1,16 @@
-#  Copyright 2025 Google LLC
+# Copyright 2023–2025 Google LLC
 #
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-#       https://www.apache.org/licenses/LICENSE-2.0
+#    https://www.apache.org/licenses/LICENSE-2.0
 #
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """ multi_token_prediction_test """
 
 import os.path
@@ -71,7 +71,7 @@ class MultiTokenPredictionLayerTest(unittest.TestCase):
     self.decoder_segment_ids = jnp.ones((self.batch_size, self.seq_len), dtype=jnp.int32)
 
     # Initialize Layer Parameters
-    init_rngs = {"params": init_rng}
+    init_rngs = {"params": init_rng, "dropout": init_rng}
     self.variables = self.mtp_layer.init(
         init_rngs,
         self.prev_hidden_state,
@@ -135,7 +135,7 @@ class MTPBlockTestModel(nn.Module):
         name="shared_embedding",
     )
     self.decoder = Decoder(
-        config=self.config, mesh=self.mesh, shared_embedding=self.shared_embedding, name="decoder_for_mtp"
+        config=self.config, mesh=self.mesh, name="decoder_for_mtp"
     )
     self.mtp_block = multi_token_prediction.MultiTokenPredictionBlock(
         config=self.config,
@@ -149,6 +149,7 @@ class MTPBlockTestModel(nn.Module):
       self, main_hidden_state, input_ids, target_ids, target_mask, position_ids, decoder_segment_ids, deterministic
   ):
     return self.mtp_block(
+        self.shared_embedding,
         main_hidden_state,
         input_ids,
         target_ids,

@@ -1,10 +1,10 @@
-# Copyright 2025 Google LLC
+# Copyright 2023–2025 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#      https://www.apache.org/licenses/LICENSE-2.0
+#    https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -23,7 +23,7 @@ base_emb_dim: 5120
 base_num_decoder_layers: 48
 base_num_query_heads: 40
 base_num_kv_heads: 8
-base_mlp_dim: 16384
+base_mlp_dim: 8192
 base_moe_mlp_dim: 8192
 vocab_size: 202048
 normalization_layer_epsilon: 1e-05

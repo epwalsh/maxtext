@@ -1,16 +1,16 @@
-#  Copyright 2025 Google LLC
+# Copyright 2023–2025 Google LLC
 #
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-#       https://www.apache.org/licenses/LICENSE-2.0
+#    https://www.apache.org/licenses/LICENSE-2.0
 #
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 """ Tests for multimodal vision encoder. """
 
@@ -37,7 +37,9 @@ from MaxText import maxengine
 
 
 # 4b with vit
-DEFAULT_LOAD_PARAMETERS_PATH = "gs://maxtext-model-checkpoints/gemma3-4b/multimodal/2025-04-25-18-06-04/checkpoints/0/items"
+DEFAULT_LOAD_PARAMETERS_PATH = (
+    "gs://maxtext-model-checkpoints/gemma3-4b/multimodal/2025-04-25-18-06-04/checkpoints/0/items"
+)
 
 
 class VisionEncoderEmbeddingTest(unittest.TestCase):
@@ -79,7 +81,7 @@ class VisionEncoderEmbeddingTest(unittest.TestCase):
     # Load and preprocess the image
     images = multimodal_utils.load_image_from_path(config.image_path)
     images = multimodal_utils.pre_process_image(images, model_name=config.model_name)
-    input_images = images[jnp.newaxis, jnp.newaxis, ...]
+    input_images = images[jnp.newaxis, jnp.newaxis, ...]  # pytype: disable=unsupported-operands
 
     # Initialize only the vision encoder part and extract the corresponding params
     vision_encoder_model = models.VisionEncoder(config)
@@ -89,7 +91,9 @@ class VisionEncoderEmbeddingTest(unittest.TestCase):
     def apply_vision_encoder_fn(params, images_input):
       return vision_encoder_model.apply({"params": params}, images_input)
 
-    jitted_apply_vision_encoder_fn: Callable[[VariableDict, tuple[...]], np.ndarray] = jax.jit(apply_vision_encoder_fn)
+    jitted_apply_vision_encoder_fn: Callable[[VariableDict, tuple[dict, ...]], np.ndarray] = jax.jit(
+        apply_vision_encoder_fn
+    )
     image_embeddings = jitted_apply_vision_encoder_fn(vision_encoder_params, input_images)  # pylint: disable=not-callable
 
     # Load golden image embeddings generated from HuggingFace Gemma3-4b

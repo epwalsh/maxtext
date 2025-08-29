@@ -1,22 +1,20 @@
-"""
-Copyright 2025 Google LLC
+# Copyright 2023–2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+"""JAX implementation of the Multi Token Prediction https://arxiv.org/pdf/2412.19437 """
 
-     https://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
-
-"""JAX implementation of the Multi Token Predicition https://arxiv.org/pdf/2412.19437 """
-
-from typing import Optional, Type
+from typing import Type
 
 import jax
 import jax.numpy as jnp
@@ -25,7 +23,7 @@ from jax.sharding import Mesh
 from flax import linen as nn
 
 from MaxText.common_types import Config, MODEL_MODE_TRAIN
-from MaxText.layers.attentions import dense_general
+from MaxText.layers.linears import dense_general
 from MaxText.layers.normalizations import rms_norm
 from MaxText.layers.decoders import Decoder, DecoderLayer
 from MaxText import max_utils
@@ -83,7 +81,7 @@ class MultiTokenPredictionLayer(nn.Module):
       prev_hidden_state: jnp.ndarray,
       target_token_embedding: jnp.ndarray,
       position_ids: jnp.ndarray,
-      decoder_segment_ids: Optional[jnp.ndarray],
+      decoder_segment_ids: None | jnp.ndarray,
       deterministic: bool,
       model_mode: str = MODEL_MODE_TRAIN,
   ) -> jnp.ndarray:
@@ -137,7 +135,7 @@ class MultiTokenPredictionLayer(nn.Module):
 
     # --- 2. Concatenate Normalized Representations ---
     # Shape: [B, S, 2*H]
-    concatenated_features = jnp.concatenate([hidden_state_norm, embedding_norm], axis=-1)
+    concatenated_features = jnp.concatenate([embedding_norm, hidden_state_norm], axis=-1)
 
     # --- 3. Project Concatenated Features ---
     # Projects from 2*H back down to H
@@ -146,6 +144,7 @@ class MultiTokenPredictionLayer(nn.Module):
         out_features_shape=cfg.base_emb_dim,
         dtype=cfg.dtype,
         weight_dtype=cfg.weight_dtype,
+        use_bias=False,
         kernel_axes=("concat_embed", "embed"),
         name=f"mtp_{k}_projection",
     )
@@ -153,7 +152,9 @@ class MultiTokenPredictionLayer(nn.Module):
     projected_features = projection_layer(concatenated_features)
 
     # --- 4. Pass through MTP Transformer Block ---
-    output = self.transformer_layer_module(config=cfg, mesh=mesh, name=f"mtp_{k}_transformer_layer")(
+    output = self.transformer_layer_module(
+        config=cfg, mesh=mesh, model_mode=model_mode, name=f"mtp_{k}_transformer_layer"
+    )(
         inputs=projected_features,
         decoder_segment_ids=decoder_segment_ids,
         decoder_positions=position_ids,
@@ -184,6 +185,7 @@ class MultiTokenPredictionBlock(nn.Module):
   @nn.compact
   def __call__(
       self,
+      shared_embedding,
       main_hidden_state,
       input_ids,
       target_ids,
@@ -191,7 +193,6 @@ class MultiTokenPredictionBlock(nn.Module):
       position_ids,
       decoder_segment_ids,
       deterministic,
-      model_mode: str = MODEL_MODE_TRAIN,
   ):
     cfg = self.config
     # The initial hidden state for the MTP chain is the raw output from the main model.
@@ -213,7 +214,13 @@ class MultiTokenPredictionBlock(nn.Module):
       rolled_position_id = roll_and_mask(rolled_position_id)
 
       # Embed the k-th future input tokens using the shared embedding module
-      target_token_embedding = self.decoder._apply_embedding(rolled_input_ids, rolled_position_id, deterministic, model_mode)
+      target_token_embedding = self.decoder._apply_embedding(
+        shared_embedding,
+        rolled_input_ids,
+        rolled_position_id,
+        deterministic,
+        self.decoder.model_mode
+      )
 
       # Instantiate and apply the MTP layer for this step
       mtp_layer = MultiTokenPredictionLayer(
@@ -225,14 +232,16 @@ class MultiTokenPredictionBlock(nn.Module):
       )
 
       next_mtp_hidden_state = mtp_layer(
-          mtp_hidden_state, target_token_embedding, rolled_position_id, decoder_segment_ids, deterministic, model_mode
+          mtp_hidden_state, target_token_embedding, position_ids, decoder_segment_ids, deterministic, self.decoder.model_mode
       )
 
       # Project to logits using the shared embedding transpose
-      mtp_logits = self.decoder._apply_output_head(next_mtp_hidden_state, deterministic, model_mode)
+      mtp_logits = self.decoder._apply_output_head(shared_embedding, next_mtp_hidden_state, deterministic)
 
       # Calculate cross-entropy loss for this specific layer's prediction
-      mtp_xent, _ = max_utils.cross_entropy_with_logits(mtp_logits, jax.nn.one_hot(rolled_target_ids, cfg.vocab_size), 0.0)
+      mtp_xent, _ = max_utils.cross_entropy_with_logits(
+          mtp_logits, jax.nn.one_hot(rolled_target_ids, cfg.vocab_size), 0.0
+      )
       mtp_xent_masked = mtp_xent * rolled_target_mask
 
       # This logic doesn't run during model initialization to avoid unwated population of the mutable collections.

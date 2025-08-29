@@ -1,18 +1,16 @@
-"""
-Copyright 2023 Google LLC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-     https://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
+# Copyright 2023–2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 # pylint: disable=bare-except, consider-using-generator
 # pytype: disable=attribute-error
@@ -84,6 +82,26 @@ class RunningAverage:
     self.count = 0
 
 
+def record_activation_metrics(output_metrics, intermediate_outputs, config):
+  """Adds the activation metrics to the metrics dict"""
+
+  if config.scan_layers:
+    metrics_dict = intermediate_outputs["intermediates"]["decoder"]["decoder"]
+
+    for layer_num in range(config.num_decoder_layers):
+      output_metrics["scalar"][f"activ_fraction_zero/layer_{layer_num:03d}"] = metrics_dict["activation_fraction_zero"][0][
+          layer_num
+      ]
+      output_metrics["scalar"][f"activ_mean/layer_{layer_num:03d}"] = metrics_dict["activation_mean"][0][layer_num]
+      output_metrics["scalar"][f"activ_stdev/layer_{layer_num:03d}"] = metrics_dict["activation_stdev"][0][layer_num]
+  else:
+    for layer_num in range(config.num_decoder_layers):
+      layer = intermediate_outputs["intermediates"]["decoder"][f"layers_{layer_num}"]
+      output_metrics["scalar"][f"activ_fraction_zero/layer_{layer_num:03d}"] = layer["activation_fraction_zero"][0]
+      output_metrics["scalar"][f"activ_mean/layer_{layer_num:03d}"] = layer["activation_mean"][0]
+      output_metrics["scalar"][f"activ_stdev/layer_{layer_num:03d}"] = layer["activation_stdev"][0]
+
+
 class MetricLogger:
   """
   Logger for saving metrics to a local file, GCS and TensorBoard.
@@ -104,6 +122,10 @@ class MetricLogger:
     if os.environ.get("BEAKER_TOKEN") and os.environ.get("BEAKER_WORKLOAD_ID") is not None:
       self.running_in_beaker = True
       self.beaker = Beaker.from_env(check_for_upgrades=False)
+
+  def reset_eval_metrics(self):
+    """Resets the cumulative metrics dictionary for a new evaluation run."""
+    self.cumulative_eval_metrics = {"scalar": defaultdict(float)}
 
   def write_metrics(self, metrics, step, is_training=True):
     """Entry point for all metrics writing in Train's Main."""
@@ -141,9 +163,8 @@ class MetricLogger:
 
   def log_metrics(self, metrics, step, is_training):
     """Logs metrics via max_logging."""
-
     if is_training:
-      loss = metrics['scalar']['learning/loss']
+      loss = metrics["scalar"]["learning/loss"]
       log_message = (
           f"completed step: {step}, seconds: {metrics['scalar']['perf/step_time_seconds']:.3f}, "
           f"TFLOP/s/device: {metrics['scalar']['perf/per_device_tflops_per_sec']:.3f}, "
@@ -157,23 +178,20 @@ class MetricLogger:
         main_model_loss = loss - mtp_loss
         log_message += f", main_model_loss: {main_model_loss:.3f}, mtp_loss: {mtp_loss:.3f}"
 
-      max_logging.log(log_message)
-
     else:
       log_message = (
           f"eval metrics after step: {step},"
-          f" loss={self.cumulative_eval_metrics['scalar']['eval/avg_loss']:.3f},"
-          f" total_weights={self.cumulative_eval_metrics['scalar']['eval/total_weights']},"
-          f" step_time_seconds={self.cumulative_eval_metrics['scalar']['eval/step_time_seconds']:.3f}"
+          f" loss={metrics['scalar']['eval/avg_loss']:.3f},"
+          f" total_weights={metrics['scalar']['eval/total_weights']}"
       )
 
       if self.config.mtp_num_layers > 0:
         log_message += (
-            f", avg_mtp_loss={self.cumulative_eval_metrics['scalar']['eval/avg_mtp_loss']:.3f},"
-            f" avg_mtp_acceptance_rate={self.cumulative_eval_metrics['scalar']['eval/avg_mtp_acceptance_rate_percent']:.2f}%"
+            f", avg_mtp_loss={metrics['scalar']['eval/avg_mtp_loss']:.3f},"
+            f" avg_mtp_acceptance_rate={metrics['scalar']['eval/avg_mtp_acceptance_rate_percent']:.2f}%"
         )
 
-      max_logging.log(log_message)
+    max_logging.log(log_message)
 
   def write_metrics_locally(self, metrics, step):
     """Writes metrics locally for testing."""
@@ -249,28 +267,30 @@ class MetricLogger:
       (step_to_write, metrics_to_write) = self.buffered_train_metrics
       self.write_metrics(metrics_to_write, step_to_write)
 
-    self.record_train_metrics(metrics, step, step_time_delta)
+    self.record_train_metrics(metrics, step, step_time_delta.total_seconds())
     self.buffered_train_metrics = (step, metrics)
 
-  def record_train_metrics(self, metrics, step, step_time_delta):
+  def record_train_metrics(self, metrics, step, step_time):
     """Records training metrics for the current step."""
-    metrics["scalar"].update({"perf/step_time_seconds": step_time_delta.total_seconds()})
+    metrics["scalar"].update({"perf/step_time_seconds": step_time})
     metrics["scalar"].update({"perf/per_device_tflops": self.metadata["per_device_tflops"]})
     metrics["scalar"].update(
-        {"perf/per_device_tflops_per_sec": self.metadata["per_device_tflops"] / step_time_delta.total_seconds()}
+        {"perf/per_device_tflops_per_sec": self.metadata["per_device_tflops"] / step_time}
     )
     metrics["scalar"].update({"perf/per_device_tokens": self.metadata["per_device_tokens"]})
     metrics["scalar"].update(
-        {"perf/per_device_tokens_per_sec": self.metadata["per_device_tokens"] / step_time_delta.total_seconds()}
+        {"perf/per_device_tokens_per_sec": self.metadata["per_device_tokens"] / step_time}
     )
     metrics["scalar"].update({"learning/current_learning_rate": self.learning_rate_schedule(step)})
     if self.performance_metric_queue:
-      self.performance_metric_queue.put(step_time_delta.total_seconds())
+      self.performance_metric_queue.put(step_time)
 
   def record_eval_metrics(self, step, metrics=None, eval_step_count=None):
     """Records eval metrics and writes the metrics to GCS and/or to TensorBoard."""
     if metrics:
-      self.cumulative_eval_metrics["scalar"]["eval/total_loss"] += float(metrics["scalar"].get("evaluation/total_loss", 0.0))
+      self.cumulative_eval_metrics["scalar"]["eval/total_loss"] += float(
+          metrics["scalar"].get("evaluation/total_loss", 0.0)
+      )
       self.cumulative_eval_metrics["scalar"]["eval/total_weights"] += float(
           metrics["scalar"].get("evaluation/total_weights", 0.0)
       )

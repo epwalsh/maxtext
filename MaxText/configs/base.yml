@@ -1,10 +1,10 @@
-# Copyright 2023 Google LLC
+# Copyright 2023–2025 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#      https://www.apache.org/licenses/LICENSE-2.0
+#    https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -44,6 +44,7 @@ load_full_state_path: ""
 # async_checkpointing is true, else a synchronous one is used. If you have
 # problems with the checkpointer we recommend trying the synchronous one.
 enable_checkpointing: True
+save_checkpoint_on_completion: True
 async_checkpointing: True
 checkpoint_period: 10_000
 # enables one replica to read the ckpt then broadcast to the rest
@@ -62,6 +63,13 @@ checkpoint_storage_use_zarr3: True
 # larger models requires higher concurrent GB for I/O
 # default concurrent gb for PytreeCheckpointHandler is 96GB
 checkpoint_storage_concurrent_gb: 96
+
+# Bool flag for enabling Orbax v1.
+enable_orbax_v1: False
+# Function for processing loaded checkpoint dict into a format MaxText can understand. (for other formats, i.e. SafeTensors)
+checkpoint_conversion_fn: None
+# Optional checkpoint context to use for loading. Options: "orbax", "safetensors"
+source_checkpoint_layout: "orbax"
 ############################### END CHECKPOINTING ##################################
 
 
@@ -83,6 +91,7 @@ dtype: "bfloat16"
 # 'intmp' for mixed precision quantization for inference as described here: MaxText/configs/quantization/README.md
 # 'fp8' for 8-bit floating-point GeMMs on NVIDIA GPUs.
 # 'nanoo_fp8' for 8-bit floating-point GeMMs on AMD MI300/MI325 GPUs.
+# 'fp8_full' for FP8 quantization with static scaling.
 quantization: ""
 # Used to configure constant_bound_config in aqt lib for static scaling, e.g. constant_bound_config='0.5, 0.5, 0.5, 0.5, 0.5, 0.5'
 constant_bound_config: ""
@@ -110,7 +119,9 @@ save_quantized_params_path: ""
 # when left as is, corresponds to training
 # accepted values are "inference"
 model_call_mode: ""
-
+use_qwix_quantization: False # Whether to use qwix for quantization. If set to True, the model will be quantized using qwix.
+# Quantization calibration method used for weights and activations. Supported methods can be found in https://github.com/google/qwix/blob/dc2a0770351c740e5ab3cce7c0efe9f7beacce9e/qwix/qconfig.py#L70-L80
+quantization_calibration_method: "absmax"
 # Shard the range finding operation for quantization. By default this is set to number of slices.
 quantization_local_shard_count: -1
 
@@ -127,9 +138,10 @@ base_mlp_dim: 7168
 base_num_decoder_layers: 16
 head_dim: 128
 mlp_activations: ["silu", "linear"]
+mlp_activations_limit: -1.0
 dropout_rate: 0.0
 logits_via_embedding: False
-normalize_embedding_logits: True  # whether to normlize pre-softmax logits if logits_via_embedding is true
+normalize_embedding_logits: True  # whether to normalize pre-softmax logits if logits_via_embedding is true
 logits_dot_in_fp32: False  # whether to use fp32 in logits_dense or shared_embedding dot product for stability
 cast_logits_to_fp32: True # whether to cast the logits to fp32. The higher precision is generally beneficial, but it can vary slightly.
 float32_qk_product: False # in dot_product attention, whether to cast to fp32 the inputs to qk product
@@ -159,14 +171,21 @@ use_random_routing: False # whether to use random routing for debug/test purpose
 tile_batch_seq: 512
 tile_activation_dim: 1024
 tile_weight_dim: 1024
+norm_topk_prob: False # Boolean to enable the top-k probability normalization. Qwen3-specific normalization of router weights.
+
+# How the expert axis is used to shard attention weights and activations
+# "fsdp" (ep acts as fsdp parallelism)
+# "context" (ep acts as context parallelism, training only)
+expert_shard_attention_option: "fsdp"
 
 # deepseek moe
-base_moe_mlp_dim: 7168 # intermediate dimension at MoE layer (use base_mlp_dim if not DeepSeek style)
+base_moe_mlp_dim: 7168 # intermediate dimension at MoE layer. For a fully MoE model, base_mlp_dim must be equal to base_moe_mlp_dim.
 first_num_dense_layers: 0 # number of initial dense layers in the model
 shared_experts: 1
 routed_scaling_factor: 1.0 # scaling factor for routing scores
 routed_score_func: "" # scoring function for routing
-routed_bias: False # a flag if a bias term is added for routing
+routed_bias: False # a flag if a learnable bias is added for routing
+mlp_bias: False # a flag if a learnable bias is added for MLP matmul
 n_routing_groups: -1 # number of groups for routing, disabled by default
 topk_routing_group: -1 # number of top groups to route inputs. For EP,
 # sending activations to a maximum of topk_routing_group distinct devices can yield performance benefits.
@@ -174,7 +193,7 @@ topk_routing_group: -1 # number of top groups to route inputs. For EP,
 # For complex architectures like llama4 there are repeated sets of
 # inhomogeneous layers. E.g. maverick uses [dense+rope, moe+rope, dense+rope, moe+nope]
 # which can only be scanned together in one large block of inhomogeneous_layer_cycle_interval=4 layers.
-inhomogeneous_layer_cycle_interval: 1 
+inhomogeneous_layer_cycle_interval: 1
 
 # pipeline parallelism
 # The number of decoder layers is equal to the product of num_stages, num_layers_per_pipeline_stage and num_pipeline_repeats.
@@ -224,7 +243,7 @@ set_remat_policy_on_pipeline_iterations: True
 set_remat_policy_on_layers_per_stage: False
 
 
-# Choose 'remat_policy' between 'minimal', 'save_dot_with_context_except_mlp', 'save_dot_except_mlpwi', 'save_dot_except_mlp',
+# Choose 'remat_policy' between 'minimal_with_context', 'minimal', 'save_dot_with_context_except_mlp', 'save_dot_except_mlpwi', 'save_dot_except_mlp',
 # 'save_qkv_proj', 'qkv_proj_offloaded', 'custom', 'minimal_offloaded', 'save_out_proj' and 'full'.
 # These options offer a trade-off between speed (fastest to slowest) and HBM usage (highest to lowest)
 remat_policy: 'full'
@@ -251,6 +270,8 @@ param_scan_axis: 1
 # The attention_type parameter determines the variants of attention, e.g. global or local_sliding
 attention: 'autoselected' # Supported attention: autoselected, dot_product, flash, cudnn_flash_te
 attention_type: 'global' # Supported attention_type: global, local_sliding, chunk, mla
+attention_bias: False # If True, adds a learnable bias to the query, key, and value projections 
+attention_sink: False
 sliding_window_size: 0
 chunk_attn_window_size: 0
 attn_logits_soft_cap: 0.0
@@ -276,23 +297,30 @@ record_internal_nn_metrics: 0
 # Create a GCS bucket, e.g. my-maxtext-outputs and set this to "gs://my-maxtext-outputs/"
 base_output_directory: ""
 
+# Multi-tier checkpointing is an experimental Orbax feature that: periodically saves to persistent storage(GCS bucket) dictated by `multi_tier_checkpointing_backup_interval_minutes` and,
+# saves to a local directory for smaller checkpoint intervals(local_checkpoint_period).
+# The local checkpoint directory must be specified when enabling multi-tier checkpointing.
+# During restore, if a local copy is available in any slice, it will be broadcast to other slices without having to fetch from persistent storage.
+# See more details on https://github.com/google/orbax/tree/main/checkpoint/orbax/checkpoint/experimental/emergency/multi_tier_checkpointing.
+# Example for enabling multi-tier checkpointing
+# enable_multi_tier_checkpointing=True local_checkpoint_directory="/local" local_checkpoint_period=20 multi_tier_checkpointing_backup_interval_minutes=20
+enable_multi_tier_checkpointing: False
+
+# The interval to backup local checkpoints to the persistent storage(GCS bucket) in minutes.
+# It should be a positive number when enabling multi-tier checkpointing.
+multi_tier_checkpointing_backup_interval_minutes: 0
+
 # Whether to enable emergency checkpoint. If True, `local_checkpoint_directory` and a non-zero `local_checkpoint_period` must also be specified.
 # Emergency checkpoint is an experimental Orbax feature that: periodically saves to persistent storage and, with a larger invertal, saves to a local directory.
 # During restore, if a local copy is available in any slice, it will be broadcast to other slices without having to fetch from persistent storage.
 # See more details on https://github.com/google/orbax/tree/main/checkpoint/orbax/checkpoint/experimental/emergency.
 enable_emergency_checkpoint: False
 
-# It should be specified when and only when `enable_emergency_checkpoint` is True.
+# It should be specified when and only when `enable_emergency_checkpoint` is True. Or when `enable_multi_tier_checkpointing` is True.
 local_checkpoint_directory: ""
 
-# It should be a positive number when and only when `enable_emergency_checkpoint` is True.
+# It should be a positive number when and only when `enable_emergency_checkpoint` or `enable_multi_tier_checkpointing` is True.
 local_checkpoint_period: 0
-
-# Whether to use emergency checkpoint with the replicator service.
-use_replicator_service: False
-
-# The interval to backup local checkpoints to the persistent storage.
-replicator_backup_interval_minutes: 0
 
 # Jax cache directory
 jax_cache_dir: "~/jax_cache"
@@ -308,18 +336,22 @@ logical_axis_rules: [
                       ['activation_embed_and_logits_batch', ['data', 'stage', 'fsdp', 'fsdp_transpose', 'expert']],
                       ['activation_heads', ['tensor', 'tensor_transpose', 'sequence','tensor_sequence','autoregressive']],
                       ['activation_kv_heads', ['tensor', 'tensor_transpose', 'sequence','tensor_sequence']],
-                      ['activation_length', ['sequence', 'context']],
-                      ['prefill_activation_length', ['sequence', 'context']],
-                      ['activation_length', ['context']],
+                      ['activation_length', ['sequence', 'context', 'expert']],
+                      ['activation_length', ['context', 'expert']],
+                      ['activation_length_no_exp', ['sequence', 'context']],
+                      ['activation_length_no_exp', ['context']],
                       ['activation_norm_length', ['tensor_sequence', 'context', 'sequence']],
+                      ['activation_q_length', ['context', 'expert']],
+                      ['activation_q_length_no_exp', ['context']],
+                      ['prefill_activation_length', ['sequence', 'context']],
                       ['prefill_activation_norm_length', ['tensor_sequence', 'context', 'sequence']],
-                      ['activation_q_length', ['context']],
                       ['activation_kv_length', []],
                       ['activation_embed', ['tensor', 'tensor_transpose']],
                       ['activation_mlp', ['tensor', 'tensor_transpose', 'tensor_sequence']],
                       ['activation_kv', ['tensor', 'tensor_transpose', 'tensor_sequence']],
                       ['activation_prefill_kv_batch', ['data', 'fsdp', 'fsdp_transpose', 'expert']],
                       ['activation_kv_batch', ['data', 'fsdp', 'fsdp_transpose', 'expert']],
+                      ['activation_kv_batch_no_exp', ['data', 'fsdp', 'fsdp_transpose']],
                       ['activation_kv_head_dim', ['tensor', 'tensor_transpose', 'tensor_sequence']],
                       ['activation_vocab', ['tensor', 'tensor_transpose', 'sequence', 'tensor_sequence']],
                       ['activation_vocab', ['tensor', 'tensor_transpose']],
@@ -342,6 +374,7 @@ logical_axis_rules: [
                       ['embed_no_exp', ['fsdp', 'sequence', 'tensor_transpose', 'context']],
                       ['embed_no_exp', ['fsdp', 'fsdp_transpose', 'sequence', 'context']],
                       ['embed_no_exp', ['fsdp', 'sequence', 'context']],
+                      ['embed_tensor_transpose', ['tensor_transpose']],           
                       ['q_lora', ['fsdp', 'fsdp_transpose', 'sequence', 'context', 'tensor_transpose', 'expert']],
                       ['q_lora', ['fsdp', 'sequence', 'context', 'tensor_transpose', 'expert']],
                       ['q_lora', ['fsdp', 'fsdp_transpose', 'sequence', 'context', 'expert']],
@@ -350,7 +383,7 @@ logical_axis_rules: [
                       ['kv_lora', ['fsdp', 'sequence', 'context', 'tensor_transpose', 'expert']],
                       ['kv_lora', ['fsdp', 'fsdp_transpose', 'sequence', 'context', 'expert']],
                       ['kv_lora', ['fsdp', 'sequence', 'context', 'expert']],
-                      ['norm', ['tensor', 'tensor_transpose', 'tensor_sequence']],
+                      ['norm', ['tensor', 'tensor_transpose']],
                       ['layers', 'stage'],
                       ['kv', []],
                       ['kv_head_dim', []],
@@ -526,8 +559,9 @@ dump_step: -1 # Dump modules at the given step if set to a positive integer.
 dump_hlo_local_dir: "/tmp/xla_dump/"
 dump_hlo_delete_local_after: True # Cleans local directory after its uploaded
 dump_hlo_gcs_dir: "" # Defaults to {base_output_directory}/{run_name}/xla_dump
+dump_hlo_local_module_name: "jit_train_step" # Filter saving modules locally by this string. Set to empty string to remove any filter.
 dump_hlo_module_name: "jit_train_step" # Filter uploading modules by this string. Set to empty string to remove any filter.
-dump_hlo_xla_flags: "" # Defaults to "--xla_dump_to={dump_hlo_local_dir} --xla_dump_hlo_module_re={dump_hlo_module_name} --xla_dump_large_constants"
+dump_hlo_xla_flags: "" # Defaults to "--xla_dump_to={dump_hlo_local_dir} --xla_dump_hlo_module_re={dump_hlo_local_module_name} --xla_dump_large_constants"
 dump_hlo_upload_all: False # If true all hosts dump HLO, false only jax.process_index()==0
 # All hosts should have identical HLO for SPMD programs, however we have encountered some bugs
 # where this is not the case and it is helpful to compare HLO across hosts.
@@ -571,6 +605,7 @@ use_untrainable_positional_embedding: False
 trainable_position_size: -1  # enable gpt3 position embedding with a positive trainable_position_size
 # RoPE parameters
 rope_type: "default" # one of "default", "llama3.1" or "yarn"
+rope_linear_scaling_factor: 1.0 # linear scaling factor for "default" RoPE (see class `RotaryEmbedding` for more)
 rope_use_scale: True # apply rope scaling for llama3.1 (see class `LLaMARotaryEmbedding` for more)
 rope_min_timescale: 1
 rope_max_timescale: 10_000 # Timescale For global Attention
@@ -616,7 +651,7 @@ report_performance_metric_for_gcp_monitoring: False
 
 enable_tensorboard: True
 
-# Vertex AI Tensorboard Configurations - https://github.com/google/maxtext/tree/main/getting_started/Use_Vertex_AI_Tensorboard.md
+# Vertex AI Tensorboard Configurations - https://github.com/AI-Hypercomputer/maxtext/blob/main/docs/guides/use_vertex_ai_tensorboard.md
 # Set to True for GCE, False if running via XPK
 use_vertex_tensorboard: False
 # Project to create Vertex AI Tensorboard in for GCE, blank if project is set using 'gcloud config set project'
@@ -683,6 +718,8 @@ allow_split_physical_axes: False
 # Apply transformations to the mesh to optimize for TPU v6e
 optimize_mesh_for_tpu_v6e: False
 
+shardy: True # Whether to use shardy XLA backend (default in Jax starting 0.7.0), or GSPMD (to be fully deprecated ~2026)
+
 use_ragged_attention: False
 ragged_block_size: 256
 
@@ -727,7 +764,7 @@ enable_prefix_caching: False
 prefix_caching_hbm_byte: 10_000_000_000 # 10 GB
 prefix_caching_dram_byte: 100_000_000_000 # 100 GB
 
-# This is a temporary flag that will removed soon after the fix lands in TE
+# This is a temporary flag that will be removed soon after the fix lands in TE
 enable_padding_causal_mask: True
 
 # Llama4-specific
@@ -754,7 +791,7 @@ image_path: "" # Local image path used for decoding
 image_placeholder: "<|image|>"
 
 ### llama4 multi modal configs
-hidden_size_for_vit: 1408 
+hidden_size_for_vit: 1408
 intermediate_size_for_vit: 5632
 num_attention_heads_for_vit: 16
 num_channels_for_vit: 3
@@ -771,3 +808,6 @@ projector_dropout_for_vit: 0.0
 # Subslice shape in the form of "x,y,z" when using pathways (single controller). 
 # Example: "8,8" to use a 8x8 subgrid (64 chips) of a full pod (16x16) of trillium.
 subslice_shape: ""
+
+# NNX
+enable_nnx: false

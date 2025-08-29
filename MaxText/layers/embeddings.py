@@ -1,22 +1,21 @@
-#  Copyright 2023 Google LLC
+# Copyright 2023–2025 Google LLC
 #
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-#       https://www.apache.org/licenses/LICENSE-2.0
+#    https://www.apache.org/licenses/LICENSE-2.0
 #
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 """Embedding Layers."""
 
 import dataclasses
 import math
-from typing import Optional
 
 import jax
 from jax import lax
@@ -26,7 +25,9 @@ from flax import linen as nn
 from flax import nnx
 
 from MaxText import max_logging
+from MaxText import max_utils
 from MaxText.common_types import MODEL_MODE_PREFILL, MODEL_MODE_TRAIN, Array, Config, DType
+from MaxText.layers import nnx_wrappers
 from MaxText.layers.initializers import Initializer, default_embed_init, variable_to_logically_partitioned
 
 _MAX_WAVELENGTH = 10_000
@@ -36,8 +37,7 @@ def _maybe_move_embedding_to_device(embedding_table: Array, config: Config) -> A
   """Moves embedding table to device if parameter offloading is enabled."""
   if config.parameter_memory_host_offload:
     max_logging.log("embeddings.py: Moving embedding parameter to device")
-    # pylint: disable=protected-access
-    return jax.device_put(embedding_table, jax._src.sharding_impls.TransferToMemoryKind("device"))
+    return jax.device_put(embedding_table, max_utils.device_space())
   return embedding_table
 
 
@@ -46,9 +46,9 @@ def embed_as_linen(
     num_embeddings: int,
     num_features: int,
     config: Config,
-    cast_input_dtype: Optional[DType] = None,
+    cast_input_dtype: None | DType = None,
     dtype: DType = jnp.float32,
-    attend_dtype: Optional[DType] = None,
+    attend_dtype: None | DType = None,
     embedding_init: Initializer = default_embed_init,
     name: str | None = None,
 ):
@@ -71,7 +71,7 @@ def embed_as_linen(
   Returns:
     A Linen module that wraps the NNX `Embed` module.
   """
-  return nnx.bridge.to_linen(
+  return nnx_wrappers.to_linen(
       Embed,
       num_embeddings=num_embeddings,
       num_features=num_features,
@@ -93,9 +93,9 @@ class Embed(nnx.Module):
       num_embeddings: int,
       num_features: int,
       config: Config,
-      cast_input_dtype: Optional[DType] = None,
+      cast_input_dtype: None | DType = None,
       dtype: DType = jnp.float32,
-      attend_dtype: Optional[DType] = None,
+      attend_dtype: None | DType = None,
       embedding_init: Initializer = default_embed_init,
       *,
       # Not used in Embed but passed in by nnx.bridge.to_linen.
@@ -125,7 +125,6 @@ class Embed(nnx.Module):
         embedding_init(rngs.params(), (self.num_embeddings, self.num_features), self.config.weight_dtype),
         sharding=("vocab", "embed"),
     )
-
 
   def __call__(self, inputs: Array, model_mode: str = MODEL_MODE_TRAIN) -> Array:
     """Embeds the inputs along the last dimension.
@@ -219,7 +218,7 @@ def rotary_embedding_as_linen(
     fprop_dtype: The dtype of the output.
     name: Name of the Linen module.
   """
-  return nnx.bridge.to_linen(
+  return nnx_wrappers.to_linen(
       RotaryEmbedding,
       min_timescale=min_timescale,
       max_timescale=max_timescale,
@@ -243,6 +242,7 @@ class RotaryEmbedding(nnx.Module):
       fprop_dtype: DType = jnp.bfloat16,
       # Not used in RotaryEmbedding but passed in by nnx.bridge.to_linen.
       # TODO: Remove when bridge no longer needed
+      rope_linear_scaling_factor: float = 1.0,
       rngs: nnx.Rngs = None,
   ):
     """Initializes the RotaryEmbedding module.
@@ -262,6 +262,7 @@ class RotaryEmbedding(nnx.Module):
     self.embedding_dims = embedding_dims
     self.cast_as_fprop_dtype = cast_as_fprop_dtype
     self.fprop_dtype = fprop_dtype
+    self.rope_linear_scaling_factor = rope_linear_scaling_factor
 
     if self.embedding_dims % 2:
       raise ValueError("Embedding dim for rotary position embedding must be a multiple of 2.")
@@ -271,12 +272,15 @@ class RotaryEmbedding(nnx.Module):
     """Returns the timescale for the rotary embedding."""
     half_embedding_dim = self.embedding_dims // 2
     fraction = 2 * jnp.arange(0, half_embedding_dim) / self.embedding_dims
-    return self.min_timescale * (self.max_timescale / self.min_timescale) ** fraction
+    timescale = self.min_timescale * (self.max_timescale / self.min_timescale) ** fraction
+    if self.rope_linear_scaling_factor != 1.0:
+      timescale = timescale * self.rope_linear_scaling_factor
+    return timescale
 
   def __call__(
       self,  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
       inputs: jax.Array,
-      position: Optional[jax.Array] = None,
+      position: None | jax.Array = None,
   ) -> jax.Array:
     """Generates a jax.Array of sinusoids with different frequencies.
 
@@ -337,7 +341,7 @@ def llama_rotary_embedding_as_linen(
     use_scale: Whether to apply LLaMA3.1 scaling factor.
     name: Name of the Linen module.
   """
-  return nnx.bridge.to_linen(
+  return nnx_wrappers.to_linen(
       LLaMARotaryEmbedding,
       min_timescale=min_timescale,
       max_timescale=max_timescale,
@@ -433,7 +437,7 @@ class LLaMARotaryEmbedding(RotaryEmbedding):
     lower_wavelen_cond = wavelen < high_freq_wavelen
     return jax.lax.cond(lower_wavelen_cond, lower_wavelen, bigger_or_equal_wavelen, freq)
 
-  def __call__(self, inputs: jax.Array, position: Optional[jax.Array] = None) -> jax.Array:
+  def __call__(self, inputs: jax.Array, position: None | jax.Array = None) -> jax.Array:
     """Applies LLaMA variant of rotary position embedding.
 
     Args:
@@ -514,7 +518,7 @@ def yarn_rotary_embedding_as_linen(
     fprop_dtype: The forward pass dtype.
     name: The name of the module.
   """
-  return nnx.bridge.to_linen(
+  return nnx_wrappers.to_linen(
       YarnRotaryEmbedding,
       embedding_dims=embedding_dims,
       max_position_embeddings=max_position_embeddings,
@@ -617,7 +621,7 @@ class YarnRotaryEmbedding(nnx.Module):
         max_position_embeddings (int): Maximum sequence length.
 
     Returns:
-        Tuple[int, int]: The range of correction dimensions (low, high), clamped to valid indices.
+        tuple[int, int]: The range of correction dimensions (low, high), clamped to valid indices.
     """
     low = math.floor(self._find_correction_dim(low_rot, dim, base, max_position_embeddings))
     high = math.ceil(self._find_correction_dim(high_rot, dim, base, max_position_embeddings))
@@ -635,7 +639,7 @@ class YarnRotaryEmbedding(nnx.Module):
     linear_func = (jnp.arange(dim, dtype=jnp.float32) - min_val) / (max_val - min_val)
     return jnp.clip(linear_func, 0, 1)
 
-  def __call__(self, inputs: Array, position: Optional[Array] = None) -> Array:
+  def __call__(self, inputs: Array, position: None | Array = None) -> Array:
     """Applies the rotary positional embedding using the precomputed complex frequencies.
 
     Args:
@@ -691,7 +695,7 @@ def positional_embedding_as_linen(*, embedding_dims: int, max_wavelength: int = 
     embedding_dims: The dimension of the embeddings.
     max_wavelength: The maximum wavelength for the sinusoidal positional embeddings.
   """
-  return nnx.bridge.to_linen(
+  return nnx_wrappers.to_linen(
       PositionalEmbedding,
       embedding_dims=embedding_dims,
       max_wavelength=max_wavelength,
@@ -756,7 +760,7 @@ def llama_vision_rotary_embedding_as_linen(
     fprop_dtype: The dtype of the output.
     name: The name of the Linen module.
   """
-  return nnx.bridge.to_linen(
+  return nnx_wrappers.to_linen(
       LlamaVisionRotaryEmbedding,
       image_size=image_size,
       patch_size=patch_size,
@@ -837,7 +841,7 @@ class LlamaVisionRotaryEmbedding(nnx.Module):
     # Convert to complex representation
     return jnp.exp(1j * freqs)
 
-  def __call__(self, inputs: Array, position: Optional[Array] = None) -> Array:
+  def __call__(self, inputs: Array, position: None | Array = None) -> Array:
     """Applies rotary embeddings to the input tensor for Llama4 vision encoder.
 
     Args:

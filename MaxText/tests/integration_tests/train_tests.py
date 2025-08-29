@@ -1,18 +1,16 @@
-"""
-Copyright 2023 Google LLC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-     https://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
+# Copyright 2023–2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 """Tests for train.py with various configs"""
 import os
@@ -38,7 +36,7 @@ class TrainTests(unittest.TestCase):
           "enable_goodput_recording=False",
           rf"tokenizer_path={os.path.join(os.path.dirname(PKG_DIR), 'assets', 'tokenizer.llama2')}",
       ],
-      "synthetic": [  # tests base config with synthtic dataset
+      "synthetic": [  # tests base config with synthetic dataset
           None,
           os.path.join(PKG_DIR, "configs", "base.yml"),
           "base_output_directory=gs://runner-maxtext-logs",
@@ -330,6 +328,7 @@ class TrainTests(unittest.TestCase):
         "enable_goodput_recording=False",
         "attention=cudnn_flash_jax",
         "packing=False",
+        "shardy=False",  # The cudnn kernel is not compatible with shardy, see (b/425746362).
         rf"tokenizer_path={os.path.join(os.path.dirname(PKG_DIR), 'assets', 'tokenizer.llama2')}",
     ]
     train_main(cudnn_flash_jax)
@@ -338,6 +337,10 @@ class TrainTests(unittest.TestCase):
   @pytest.mark.tpu_only
   def test_tpu_base_model_ag_once(self):
     train_main(TrainTests.CONFIGS["base"] + ["model_fsdp_ag_once=True"])
+
+  @pytest.mark.integration_test
+  def test_base_model_shardy_false(self):
+    train_main(TrainTests.CONFIGS["base"] + ["shardy=False"])
 
   @pytest.mark.integration_test
   @pytest.mark.gpu_only

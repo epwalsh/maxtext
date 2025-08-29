@@ -1,10 +1,10 @@
-# Copyright 2025 The JAX Authors.
+# Copyright 2023–2025 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     https://www.apache.org/licenses/LICENSE-2.0
+#    https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -109,7 +109,7 @@ def ref_ragged_paged_attention(
   return jnp.concatenate(outputs, axis=0)
 
 
-# Expect to run these checkes during runtime.
+# Expect to run these checks during runtime.
 def validate_inputs_on_runtime(
     q: jax.Array,  # [max_num_batched_tokens, num_q_heads, head_dim]
     k_pages: jax.Array,  # [total_num_pages, page_size, num_kv_heads, head_dim]
@@ -474,7 +474,7 @@ def ragged_paged_attention_kernel(
       v_ref = cur_async_copy_v.wait().reshape(kv_to_load_shape)
       for kv_head_idx in range(num_kv_heads_per_blk):
         q_head_idx = kv_head_idx * num_q_heads_per_kv_head
-        # TODO(jevinjiang): extra handlig for packed type that can start at
+        # TODO(jevinjiang): extra handling for packed type that can start at
         # unaligned position!
         q = fold_on_2nd_minor(q_ref[:, q_head_idx : q_head_idx + num_q_heads_per_kv_head, :])
         k = strided_load_kv(k_ref, kv_head_idx, num_kv_heads_per_blk)
@@ -622,8 +622,8 @@ def ragged_paged_attention(
   )
   in_specs = [
       q_block_spec,
-      pl.BlockSpec(memory_space=pltpu.TPUMemorySpace.ANY),
-      pl.BlockSpec(memory_space=pltpu.TPUMemorySpace.ANY),
+      pl.BlockSpec(memory_space=pltpu.MemorySpace.ANY),
+      pl.BlockSpec(memory_space=pltpu.MemorySpace.ANY),
   ]
   out_specs = q_block_spec
   lm_scratch = pltpu.VMEM(
@@ -669,7 +669,7 @@ def ragged_paged_attention(
           grid=grid,
           scratch_shapes=scratch_shapes,
       ),
-      compiler_params=pltpu.TPUCompilerParams(
+      compiler_params=pltpu.CompilerParams(
           dimension_semantics=(
               "arbitrary",
               "arbitrary",

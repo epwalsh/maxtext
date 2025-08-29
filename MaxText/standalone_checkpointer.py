@@ -1,18 +1,16 @@
-"""
-Copyright 2023 Google LLC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-     https://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
+# Copyright 2023–2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 # pylint: disable=g-bad-todo, abstract-method, consider-using-with
 """Standalone checkpointer - only saves and restores checkpoints at regular intervals, accesses storage needs."""
@@ -39,10 +37,11 @@ from MaxText import maxtext_utils
 from MaxText import train_utils
 from MaxText import max_logging
 from MaxText import pyconfig
-from MaxText.train import get_first_step, validate_train_config
+from MaxText.train import get_first_step
+from MaxText.train_utils import validate_train_config
 from MaxText.layers import models
 
-Transformer = models.Transformer
+Transformer = models.transformer_as_linen
 
 
 def checkpoint_loop(config, state=None):
@@ -54,7 +53,7 @@ def checkpoint_loop(config, state=None):
     ckpt_path:
   Returns:
   """
-  model = mt.from_pretrained(config)
+  model = mt.from_config(config)
   mesh = model.mesh
   init_rng, checkpoint_manager, _, tx = train_utils.create_training_tools(config, model, mesh)
 
@@ -95,7 +94,9 @@ def checkpoint_loop(config, state=None):
         checkpoint_manager.wait_until_finished()
         end_time = datetime.datetime.now()
         if jax.process_index() == 0:
-          max_logging.log(f"STANDALONE CHECKPOINTER : Checkpoint saved in {end_time - start_time} ,step {step}, on host 0")
+          max_logging.log(
+              f"STANDALONE CHECKPOINTER : Checkpoint saved in {end_time - start_time} ,step {step}, on host 0"
+          )
 
   return state
 

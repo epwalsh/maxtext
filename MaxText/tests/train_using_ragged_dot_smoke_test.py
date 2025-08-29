@@ -1,18 +1,16 @@
-"""
-Copyright 2025 Google LLC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-     https://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
+# Copyright 2023–2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import os
 import unittest
@@ -36,14 +34,17 @@ class Train(unittest.TestCase):
             os.path.join(PKG_DIR, "configs", "base.yml"),
             f"base_output_directory={test_tmpdir}",
             "run_name=ragged_dot_smoke_test",
-            "base_emb_dim=8",
+            "base_emb_dim=128",
             "base_num_query_heads=4",
             "base_num_kv_heads=4",
-            "base_mlp_dim=32",
+            "base_mlp_dim=128",
+            "base_moe_mlp_dim=128",
             "base_num_decoder_layers=8",
             "head_dim=128",
-            # Currently mistral is the only block that supports MoE.
-            "decoder_block=mistral",
+            # TODO(b/441100085): When changing the decoder_block we might
+            # need to adjust the tiling.
+            "decoder_block=deepseek",
+            "attention_type=mla",
             "num_experts=2",
             # Enable sparse_matmul.
             "sparse_matmul=True",

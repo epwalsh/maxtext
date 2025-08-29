@@ -1,15 +1,16 @@
-"""
-Copyright 2023 Google LLC
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-     https://www.apache.org/licenses/LICENSE-2.0
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
+# Copyright 2023–2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 # pylint: disable=g-bad-todo, abstract-method, consider-using-with
 """ Standalone data loader - only loads data for each training step, accesses storage needs."""
@@ -29,7 +30,8 @@ import jax
 from MaxText import max_logging
 from MaxText import pyconfig
 from MaxText.data_loader import DataLoader
-from MaxText.train import validate_train_config, get_first_step, setup_train_loop
+from MaxText.train import get_first_step
+from MaxText.train_utils import validate_train_config,setup_train_loop
 
 
 def data_load_loop(config, state=None):
@@ -48,7 +50,9 @@ def data_load_loop(config, state=None):
   first_end = datetime.datetime.now()
   time_to_load_first_batch = first_end - start
   if jax.process_index() == 0:
-    max_logging.log(f"STANDALONE DATALOADER : First step completed in {time_to_load_first_batch.seconds} seconds, on host 0")
+    max_logging.log(
+        f"STANDALONE DATALOADER : First step completed in {time_to_load_first_batch.seconds} seconds, on host 0"
+    )
 
   for _ in np.arange(start_step + 1, config.steps):
     example_batch = data_loader.load_next_batch()
