@@ -3,8 +3,11 @@
 set -ex
 
 script="${1:-mixtral/8x7b_8k.sh}"
-#script="${1:-llama3/8b_8k.sh}"
-#script="${1:-llama3/70b_8k.sh}"
+# Valid script names are:
+# - llama3/8b_8k.sh
+# - llama3/70b_8k.sh
+# - llama3/8b_128k.sh
+# - mixtral/8x7b_8k.sh
 
 # Remove file extension for naming.
 name="${script%.*}"
