@@ -68,7 +68,7 @@ python3 -m MaxText.train MaxText/configs/base.yml model_name=mixtral-8x7b hardwa
     weight_dtype=bfloat16 \
     sparse_matmul=False \
     packing=False \
-    remat_policy=minimal
+    remat_policy=minimal_flash
 
     # quantization=fp8
 
