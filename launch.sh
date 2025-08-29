@@ -4,6 +4,7 @@ set -ex
 
 script="${1:-mixtral/test_8x7b.sh}"
 #script="${1:-llama3/test_8b.sh}"
+#script="${1:-llama3/test_70b.sh}"
 
 # Model family given by the parent directory.
 family=$(dirname "$script")

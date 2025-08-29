@@ -42,12 +42,12 @@ export JAX_ENABLE_PGLE=false
 export JAX_REMOVE_CUSTOM_PARTITIONING_PTR_FROM_CACHE_KEY=true
 
 python3 -m MaxText.train MaxText/configs/base.yml \
-    model_name=llama3-8b \
+    model_name=llama3-70b \
     hardware=gpu \
     dataset_type=synthetic \
     base_output_directory="${BASE_OUTPUT_PATH}" \
     dataset_path="${DATASET_PATH}" \
-    run_name="llama3-8b_pre_training_$(date '+%H%M%S')" \
+    run_name="llama3-70b_pre_training_$(date '+%H%M%S')" \
     enable_tensorboard=false \
     async_checkpointing=false \
     attention=cudnn_flash_te \
