@@ -66,6 +66,12 @@ python3 -m MaxText.train MaxText/configs/base.yml \
     packing=False \
     remat_policy=custom \
     context=device \
-    quantization=fp8
+    query_proj=device \
+    key_proj=device \
+    value_proj=device \
+    qkv_proj=device \
+    out_proj=device
+
+    # quantization=fp8
 
 echo "Finished pre-training"
