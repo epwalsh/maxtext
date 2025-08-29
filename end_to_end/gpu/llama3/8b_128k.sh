@@ -64,7 +64,7 @@ python3 -m MaxText.train MaxText/configs/base.yml \
     weight_dtype=bfloat16 \
     sparse_matmul=False \
     packing=False \
-    remat_policy=full
+    remat_policy=save_dot_with_context_except_mlp
 
     # quantization=fp8
 
