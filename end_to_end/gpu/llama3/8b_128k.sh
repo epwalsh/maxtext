@@ -55,6 +55,7 @@ python3 -m MaxText.train MaxText/configs/base.yml \
     enable_checkpointing=false \
     ici_fsdp_parallelism=-1 \
     ici_context_parallelism=8 \
+    context_parallel_strategy=RING \
     max_target_length=131072 \
     per_device_batch_size=1 \
     reuse_example_batch=1 \

@@ -741,6 +741,8 @@ sa_v_layout: "HEAD_DIM_MINOR"
 
 ### Determine if we want to use load balance for context parallelism
 context_parallel_load_balance: True
+# TE engine CP strategy
+context_parallel_strategy: DEFAULT
 
 ### Paged Attention ###
 # These settings take effect only when `attention=paged`.
