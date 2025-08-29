@@ -10,8 +10,10 @@ script="${1:-mixtral/8x7b_8k.sh}"
 name="${script%.*}"
 # Replace slashes in path with dashes.
 name="${name//\//-}"
-# Replace underscores with dashes.
+# Replace underscores with dashes for run name.
 name="${name//_/-}"
+# Keep group name with underscores.
+group_name="${name//-/_}"
 
 gantry run \
     --show-logs \
@@ -20,7 +22,7 @@ gantry run \
     --name="${name}-$(date +%Y%m%d-%H%M%S)" \
     --description="MaxText ${name}" \
     --group=petew/B200_benchmarks \
-    --group="petew/B200_benchmarks_${name}" \
+    --group="petew/B200_benchmarks_${group_name}" \
     --priority=urgent \
     --task-timeout=20m \
     --env-secret='GOOGLE_CREDENTIALS=GOOGLE_CREDENTIALS' \
