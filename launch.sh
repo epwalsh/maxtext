@@ -2,12 +2,10 @@
 
 set -ex
 
-script="${1:-mixtral/test_8x7b.sh}"
-#script="${1:-llama3/test_8b.sh}"
-#script="${1:-llama3/test_70b.sh}"
+script="${1:-mixtral/8x7b_8k.sh}"
+#script="${1:-llama3/8b_8k.sh}"
+#script="${1:-llama3/70b_8k.sh}"
 
-# Model family given by the parent directory.
-family=$(dirname "$script")
 # Remove file extension for naming.
 name="${script%.*}"
 # Replace slashes in path with dashes.
@@ -22,8 +20,7 @@ gantry run \
     --name="${name}-$(date +%Y%m%d-%H%M%S)" \
     --description="MaxText ${name}" \
     --group=petew/B200_benchmarks \
-    --group="petew/B200_benchmarks_${family}" \
-    --group="petew/B200_benchmarks_${family}_8k" \
+    --group="petew/B200_benchmarks_${name}" \
     --priority=urgent \
     --task-timeout=20m \
     --env-secret='GOOGLE_CREDENTIALS=GOOGLE_CREDENTIALS' \
