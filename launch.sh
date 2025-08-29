@@ -18,6 +18,10 @@ name="${name//_/-}"
 # Keep group name with underscores.
 group_name="${name//-/_}"
 
+# Image options:
+# - petew/maxtext
+# - 01JWSG3DFY30JECZQMPP3P0WXW (petew/olmax)
+
 gantry run \
     --show-logs \
     --yes \
@@ -30,7 +34,7 @@ gantry run \
     --task-timeout=120m \
     --env-secret='GOOGLE_CREDENTIALS=GOOGLE_CREDENTIALS' \
     --env-secret='BEAKER_TOKEN' \
-    --beaker-image=01JWSG3DFY30JECZQMPP3P0WXW \
+    --beaker-image=petew/maxtext \
     --system-python \
     --gpu-type=b200 \
     --gpus=8 -- \
