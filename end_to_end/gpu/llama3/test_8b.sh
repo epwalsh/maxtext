@@ -49,6 +49,7 @@ python3 -m MaxText.train MaxText/configs/base.yml \
     reuse_example_batch=1 \
     steps=100 \
     tokenizer_path=assets/tokenizer_llama3.tiktoken \
+    tokenizer_type=tiktoken \
     weight_dtype=bfloat16 \
     sparse_matmul=False \
     packing=False \
