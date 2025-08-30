@@ -1,6 +1,6 @@
-jax>=0.4.30
-jaxlib>=0.4.30
-orbax-checkpoint>=0.5.12
+jax
+jaxlib
+orbax-checkpoint
 absl-py
 array-record
 aqtp
@@ -15,7 +15,7 @@ google-api-core
 google-api-python-client
 grain[parquet]>=0.2.6
 huggingface_hub
-flax>=0.10.6
+flax
 jaxtyping
 ml-collections
 ml-goodput-measurement==0.0.10
