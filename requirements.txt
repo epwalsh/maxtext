@@ -16,7 +16,8 @@ google-api-core
 google-api-python-client
 grain[parquet]>=0.2.6
 huggingface_hub
-flax
+flax>=0.10.6
+# flax
 jaxtyping
 ml-collections
 ml-goodput-measurement==0.0.10
