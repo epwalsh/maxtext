@@ -19,7 +19,8 @@ name="${name//_/-}"
 group_name="${name//-/_}"
 
 # Image options:
-# - petew/maxtext
+# - 01K3W6CM744M98H94HZGNWDY84 (petew/maxtext)
+# - 01K3W08TB7WWCCC2CJEZA1Z98V (petew/maxtext from newer nvcr base image)
 # - 01JWSG3DFY30JECZQMPP3P0WXW (petew/olmax)
 
 gantry run \
@@ -34,7 +35,7 @@ gantry run \
     --task-timeout=120m \
     --env-secret='GOOGLE_CREDENTIALS=GOOGLE_CREDENTIALS' \
     --env-secret='BEAKER_TOKEN' \
-    --beaker-image=01JWSG3DFY30JECZQMPP3P0WXW \
+    --beaker-image=petew/maxtext \
     --system-python \
     --gpu-type=b200 \
     --gpus=8 -- \
