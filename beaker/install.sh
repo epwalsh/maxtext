@@ -3,4 +3,4 @@
 set -e
 
 pip uninstall -y MaxText
-uv pip install -r beaker/requirements.txt
+uv pip install --system --break-system-packages -r beaker/requirements.txt

@@ -35,7 +35,7 @@ gantry run \
     --task-timeout=120m \
     --env-secret='GOOGLE_CREDENTIALS=GOOGLE_CREDENTIALS' \
     --env-secret='BEAKER_TOKEN' \
-    --beaker-image=petew/olmax \
+    --beaker-image=petew/maxtext \
     --system-python \
     --install=beaker/install.sh \
     --gpu-type=b200 \
