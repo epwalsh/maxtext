@@ -41,6 +41,14 @@ export NCCL_ALGO=Tree,Ring
 export JAX_ENABLE_PGLE=false
 export JAX_REMOVE_CUSTOM_PARTITIONING_PTR_FROM_CACHE_KEY=true
 
+if [[ -n "$BEAKER_REPLICA_COUNT" ]]; then
+    export NNODES="$BEAKER_REPLICA_COUNT"
+    export NODE_RANK="$BEAKER_REPLICA_RANK"
+    export GPUS_PER_NODE=8
+    export JAX_COORDINATOR_PORT=29400
+    export JAX_COORDINATOR_ADDRESS="$BEAKER_LEADER_REPLICA_HOSTNAME"
+fi
+
 python3 -m MaxText.train MaxText/configs/base.yml \
     model_name=llama3-8b \
     hardware=gpu \
