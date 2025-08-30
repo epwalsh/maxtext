@@ -37,6 +37,7 @@ gantry run \
     --env-secret='BEAKER_TOKEN' \
     --beaker-image=petew/maxtext \
     --system-python \
+    --install=beaker/install.sh \
     --gpu-type=b200 \
     --gpus=8 -- \
     "./end_to_end/gpu/${script}"
