@@ -19,7 +19,8 @@ name="${name//_/-}"
 group_name="${name//-/_}"
 
 # Image options:
-# - petew/maxtext
+# - 01K3W6CM744M98H94HZGNWDY84 (petew/maxtext)
+# - 01K3W08TB7WWCCC2CJEZA1Z98V (petew/maxtext from newer nvcr base image)
 # - 01JWSG3DFY30JECZQMPP3P0WXW (petew/olmax)
 
 gantry run \
