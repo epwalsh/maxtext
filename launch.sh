@@ -34,7 +34,7 @@ gantry run \
     --task-timeout=120m \
     --env-secret='GOOGLE_CREDENTIALS=GOOGLE_CREDENTIALS' \
     --env-secret='BEAKER_TOKEN' \
-    --beaker-image=petew/maxtext \
+    --beaker-image=01JWSG3DFY30JECZQMPP3P0WXW \
     --system-python \
     --gpu-type=b200 \
     --gpus=8 -- \
