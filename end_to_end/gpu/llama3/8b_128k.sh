@@ -47,6 +47,7 @@ if [[ -n "$BEAKER_REPLICA_COUNT" ]]; then
     export GPUS_PER_NODE=8
     export JAX_COORDINATOR_PORT=29400
     export JAX_COORDINATOR_ADDRESS="$BEAKER_LEADER_REPLICA_HOSTNAME"
+    export JAX_COORDINATOR_IP="$BEAKER_LEADER_REPLICA_HOSTNAME"
 fi
 
 python3 -m MaxText.train MaxText/configs/base.yml \
