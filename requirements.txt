@@ -1,6 +1,6 @@
 jax
 jaxlib
-orbax-checkpoint
+orbax-checkpoint>=0.5.12
 absl-py
 array-record
 aqtp
