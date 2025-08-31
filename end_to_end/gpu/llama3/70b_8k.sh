@@ -53,6 +53,8 @@ python3 -m MaxText.train MaxText/configs/base.yml \
     attention=cudnn_flash_te \
     dtype=bfloat16 \
     enable_checkpointing=false \
+    ici_data_parallelism=1 \
+    idi_fsdp_parallelism=-1 \
     ici_fsdp_parallelism=8 \
     max_target_length=8192 \
     per_device_batch_size=4 \
