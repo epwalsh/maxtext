@@ -23,7 +23,7 @@ export XLA_FLAGS="--xla_gpu_enable_latency_hiding_scheduler=true
  --xla_gpu_enable_while_loop_double_buffering=true
  --xla_gpu_enable_all_gather_combine_by_dim=false
  --xla_gpu_enable_reduce_scatter_combine_by_dim=false
- --xla_disable_hlo_passes="
+ --xla_disable_hlo_passes=rematerialization"
 
 # Threshold settings from mixtral config:
 # --xla_gpu_all_reduce_combine_threshold_bytes=71303168
