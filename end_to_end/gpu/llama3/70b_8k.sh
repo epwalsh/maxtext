@@ -60,7 +60,7 @@ python3 -m MaxText.train MaxText/configs/base.yml \
     steps=120 \
     tokenizer_path=assets/tokenizer_llama3.tiktoken \
     tokenizer_type=tiktoken \
-    weight_dtype=bfloat16 \
+    weight_dtype=float32 \
     sparse_matmul=False \
     packing=False \
     remat_policy=full
