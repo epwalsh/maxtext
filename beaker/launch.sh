@@ -32,10 +32,17 @@ gantry run \
     --group=petew/B200_benchmarks \
     --group="petew/B200_benchmarks_${group_name}" \
     --priority=urgent \
-    --task-timeout=120m \ --env-secret='GOOGLE_CREDENTIALS=GOOGLE_CREDENTIALS' \
+    --task-timeout=120m \
+    --env-secret='GOOGLE_CREDENTIALS=GOOGLE_CREDENTIALS' \
     --env-secret='BEAKER_TOKEN' \
     --beaker-image=petew/olmax \
     --system-python \
+    --replicas=4 \
+    --leader-selection \
+    --host-networking \
+    --propagate-failure \
+    --propagate-preemption \
+    --synchronized-start-timeout='5m' \
     --gpu-type=b200 \
     --gpus=8 -- \
     "./end_to_end/gpu/${script}"
