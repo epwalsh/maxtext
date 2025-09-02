@@ -63,7 +63,7 @@ python3 -m MaxText.train MaxText/configs/base.yml \
     enable_checkpointing=false \
     dcn_data_parallelism=1 \
     dcn_fsdp_parallelism=1 \
-    dcn_pipeline_parallelism=4 \
+    dcn_pipeline_parallelism="$NNODES" \
     ici_fsdp_parallelism=1 \
     ici_context_parallelism=8 \
     max_target_length=131072 \
