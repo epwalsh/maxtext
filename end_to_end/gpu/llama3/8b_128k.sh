@@ -35,7 +35,7 @@ export XLA_FLAGS="--xla_gpu_enable_latency_hiding_scheduler=true
 # --xla_gpu_all_gather_combine_threshold_bytes=134217728
 # --xla_gpu_reduce_scatter_combine_threshold_bytes=67108864
 
-export CUDA_DEVICE_MAX_CONNECTIONS=8
+export CUDA_DEVICE_MAX_CONNECTIONS=1
 export NVTE_FUSED_ATTN=1
 export NCCL_ALGO=Tree,Ring
 export JAX_ENABLE_PGLE=false
