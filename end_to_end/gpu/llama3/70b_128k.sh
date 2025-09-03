@@ -62,8 +62,7 @@ python3 -m MaxText.train MaxText/configs/base.yml \
     dtype=bfloat16 \
     enable_checkpointing=false \
     dcn_data_parallelism=1 \
-    dcn_fsdp_parallelism=1 \
-    dcn_pipeline_parallelism="$NNODES" \
+    dcn_fsdp_parallelism=-1 \
     ici_fsdp_parallelism=1 \
     ici_context_parallelism=8 \
     max_target_length=131072 \
@@ -77,6 +76,7 @@ python3 -m MaxText.train MaxText/configs/base.yml \
     packing=False \
     remat_policy=full
 
+    # dcn_pipeline_parallelism="$NNODES" \
     # quantization=fp8
 
 echo "Finished pre-training"
