@@ -26,7 +26,6 @@ group_name="${name//-/_}"
 gantry run \
     --show-logs \
     --yes \
-    --allow-dirty \
     --name="${name}-$(date +%Y%m%d-%H%M%S)" \
     --description="MaxText ${name}" \
     --group=petew/B200_benchmarks \
@@ -37,7 +36,7 @@ gantry run \
     --env-secret='BEAKER_TOKEN' \
     --beaker-image=petew/olmax \
     --system-python \
-    --replicas=4 \
+    --replicas=8 \
     --leader-selection \
     --host-networking \
     --propagate-failure \
