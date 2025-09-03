@@ -41,6 +41,14 @@ export NCCL_ALGO=Tree,Ring
 export JAX_ENABLE_PGLE=false
 export JAX_REMOVE_CUSTOM_PARTITIONING_PTR_FROM_CACHE_KEY=true
 
+if [[ -n "$BEAKER_REPLICA_COUNT" ]]; then
+    export GPUS_PER_NODE=8
+    export NNODES="$BEAKER_REPLICA_COUNT"
+    export NODE_RANK="$BEAKER_REPLICA_RANK"
+    export JAX_COORDINATOR_IP="$BEAKER_LEADER_REPLICA_HOSTNAME"
+    export JAX_COORDINATOR_PORT=29400
+fi
+
 python3 -m MaxText.train MaxText/configs/base.yml \
     model_name=llama3-8b \
     hardware=gpu \
@@ -53,6 +61,8 @@ python3 -m MaxText.train MaxText/configs/base.yml \
     attention=cudnn_flash_te \
     dtype=bfloat16 \
     enable_checkpointing=false \
+    dcn_data_parallelism=1 \
+    dcn_fsdp_parallelism=-1 \
     ici_fsdp_parallelism=1 \
     ici_context_parallelism=8 \
     max_target_length=131072 \
@@ -61,7 +71,7 @@ python3 -m MaxText.train MaxText/configs/base.yml \
     steps=120 \
     tokenizer_path=assets/tokenizer_llama3.tiktoken \
     tokenizer_type=tiktoken \
-    weight_dtype=bfloat16 \
+    weight_dtype=float32 \
     sparse_matmul=False \
     packing=False \
     remat_policy=custom \
