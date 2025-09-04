@@ -36,7 +36,7 @@ gantry run \
     --env-secret='BEAKER_TOKEN' \
     --beaker-image=petew/olmax \
     --system-python \
-    --replicas=8 \
+    --replicas=5 \
     --leader-selection \
     --host-networking \
     --propagate-failure \
