@@ -34,9 +34,9 @@ gantry run \
     --task-timeout=120m \
     --env-secret='GOOGLE_CREDENTIALS=GOOGLE_CREDENTIALS' \
     --env-secret='BEAKER_TOKEN' \
-    --beaker-image=petew/olmax \
+    --beaker-image=petew/olmax-25.08 \
     --system-python \
-    --replicas=5 \
+    --replicas=2 \
     --leader-selection \
     --host-networking \
     --propagate-failure \
