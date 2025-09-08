@@ -32,6 +32,7 @@ gantry run \
     --group="petew/B200_benchmarks_${group_name}" \
     --priority=urgent \
     --task-timeout=120m \
+    --slack-webhook-url="$SLACK_WEBHOOK_URL" \
     --env-secret='GOOGLE_CREDENTIALS=GOOGLE_CREDENTIALS' \
     --env-secret='BEAKER_TOKEN' \
     --beaker-image=petew/olmax-25.08 \
