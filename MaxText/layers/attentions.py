@@ -944,6 +944,7 @@ class AttentionOp(nnx.Module):
         scale_factor=1.0,
         transpose_batch_sequence=False,
         window_size=sliding_window_size,
+        context_parallel_strategy=self.config.context_parallel_strategy,
         context_parallel_causal_load_balanced=self.config.context_parallel_load_balance,
         context_parallel_axis="context",
     )

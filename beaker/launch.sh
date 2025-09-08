@@ -36,6 +36,7 @@ gantry run \
     --env-secret='BEAKER_TOKEN' \
     --beaker-image=petew/olmax-25.08 \
     --system-python \
+    --post-setup=beaker/patch_fused_attention.sh \
     --replicas=2 \
     --leader-selection \
     --host-networking \
