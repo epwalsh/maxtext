@@ -57,7 +57,7 @@ gantry run \
     --beaker-image=petew/olmax-25.08 \
     --system-python \
     --post-setup=beaker/patch_fused_attention.sh \
-    --replicas=2 \
+    --replicas=4 \
     --leader-selection \
     --host-networking \
     --propagate-failure \
