@@ -57,13 +57,7 @@ gantry run \
     --beaker-image=petew/olmax-25.08 \
     --system-python \
     --post-setup=beaker/patch_fused_attention.sh \
-    --replicas=2 \
-    --leader-selection \
-    --host-networking \
-    --propagate-failure \
-    --propagate-preemption \
-    --synchronized-start-timeout='5m' \
-    --gpu-type=b200 \
+    --gpu-type=h100 \
     --gpus=8 -- \
     "./end_to_end/gpu/${script}"
 
@@ -73,6 +67,7 @@ gantry run \
     # --propagate-failure \
     # --propagate-preemption \
     # --synchronized-start-timeout='5m' \
+    # --gpu-type=b200 \
     #
     # --beaker-image=petew/maxtext \
     # --install=beaker/install.sh \
