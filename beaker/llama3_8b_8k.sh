@@ -20,7 +20,7 @@ export XLA_FLAGS="--xla_gpu_enable_latency_hiding_scheduler=true
  --xla_gpu_enable_while_loop_double_buffering=true
  --xla_gpu_enable_all_gather_combine_by_dim=false
  --xla_gpu_enable_reduce_scatter_combine_by_dim=false
- --xla_disable_hlo_passes="
+ --xla_disable_hlo_passes=rematerialization"
 
 # Threshold settings from mixtral config:
 # --xla_gpu_all_reduce_combine_threshold_bytes=71303168
@@ -32,7 +32,7 @@ export XLA_FLAGS="--xla_gpu_enable_latency_hiding_scheduler=true
 # --xla_gpu_all_gather_combine_threshold_bytes=134217728
 # --xla_gpu_reduce_scatter_combine_threshold_bytes=67108864
 
-export CUDA_DEVICE_MAX_CONNECTIONS=8
+# export CUDA_DEVICE_MAX_CONNECTIONS=8
 export NVTE_FUSED_ATTN=1
 export NCCL_ALGO=Tree,Ring
 export JAX_ENABLE_PGLE=false
@@ -61,7 +61,8 @@ python3 -m MaxText.train MaxText/configs/base.yml \
     sparse_matmul=false \
     packing=false \
     scan_layers=false \
-    remat_policy=none
+    use_iota_embed=true \
+    remat_policy=minimal_with_context
 
     # quantization=fp8
 
