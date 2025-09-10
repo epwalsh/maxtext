@@ -66,6 +66,7 @@ python3 -m MaxText.train MaxText/configs/base.yml \
     dcn_fsdp_parallelism=1 \
     dcn_pipeline_parallelism=-1 \
     num_layers_per_pipeline_stage=2 \
+    num_pipeline_microbatches=4 \
     ici_fsdp_parallelism=1 \
     ici_context_parallelism=8 \
     context_parallel_strategy=ring \
