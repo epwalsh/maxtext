@@ -3,11 +3,19 @@
 set -ex
 
 script="${1:-beaker/llama3_8b_8k.sh}"
-# Valid script names are:
-# - llama3/8b_8k.sh
-# - llama3/70b_8k.sh
-# - llama3/8b_128k.sh
-# - mixtral/8x7b_8k.sh
+num_nodes="${2:-1}"
+
+GANTRY_MULTI_NODE_ARGS=()
+if (( num_nodes > 1 )); then
+    GANTRY_MULTI_NODE_ARGS+=(
+        --replicas="$num_nodes"
+        --leader-selection
+        --host-networking
+        --propagate-failure
+        --propagate-preemption
+        --synchronized-start-timeout='5m'
+    )
+fi
 
 name=$(basename "$script")
 # Remove file extension for naming.
@@ -23,6 +31,7 @@ gantry run \
     --show-logs \
     --yes \
     --name="${name}-$(date +%Y%m%d-%H%M%S)" \
+    --allow-dirty \
     --workspace=ai2/google_benchmarks \
     --description="MaxText ${name}" \
     --group=petew/B200_benchmarks \
@@ -35,13 +44,8 @@ gantry run \
     --beaker-image=petew/maxtext \
     --system-python \
     --post-setup=beaker/patch_fused_attention.sh \
-    --replicas=2 \
-    --leader-selection \
-    --host-networking \
-    --propagate-failure \
-    --propagate-preemption \
-    --synchronized-start-timeout='5m' \
-    --gpu-type=b200 \
+    "${GANTRY_MULTI_NODE_ARGS[@]}" \
+    --gpu-type=h100 \
     --gpus=8 -- \
     "./end_to_end/gpu/${script}"
 
