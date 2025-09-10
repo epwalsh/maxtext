@@ -4,6 +4,7 @@ set -ex
 
 script="${1:-beaker/llama3_8b_8k.sh}"
 num_nodes="${2:-1}"
+gpu_type=b200
 
 GANTRY_MULTI_NODE_ARGS=()
 if (( num_nodes > 1 )); then
@@ -46,17 +47,6 @@ gantry run \
     --system-python \
     --post-setup=beaker/patch_fused_attention.sh \
     "${GANTRY_MULTI_NODE_ARGS[@]}" \
-    --gpu-type=h100 \
+    --gpu-type="$gpu_type" \
     --gpus=8 -- \
     "${script}"
-
-    # --replicas=2 \
-    # --leader-selection \
-    # --host-networking \
-    # --propagate-failure \
-    # --propagate-preemption \
-    # --synchronized-start-timeout='5m' \
-    #
-    # --beaker-image=petew/maxtext \
-    # --install=beaker/install.sh \
-    # --beaker-image=petew/olmax-25.08 \
