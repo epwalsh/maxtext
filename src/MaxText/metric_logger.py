@@ -131,6 +131,10 @@ class MetricLogger:
   def write_metrics(self, metrics, step, is_training=True):
     """Entry point for all metrics writing in Train's Main."""
     if metrics:
+      if is_training and step + 1 >= 20:
+        tps_avg = self.tps_running_average.update(float(metrics['scalar']['perf/per_device_tokens_per_sec']))
+        metrics["scalar"]['perf/per_device_tokens_per_sec_avg'] = tps_avg
+
       self.log_metrics(metrics, step, is_training)
 
       if self.config.enable_tensorboard:
