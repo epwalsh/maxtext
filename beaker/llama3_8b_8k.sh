@@ -54,16 +54,16 @@ python3 -m MaxText.train MaxText/configs/base.yml \
     dtype=bfloat16 \
     enable_checkpointing=false \
     ici_fsdp_parallelism=8 \
-    max_target_length=8192 \
+    max_target_length=4096 \
     per_device_batch_size=1 \
     reuse_example_batch=1 \
     steps=120 \
     tokenizer_path=assets/tokenizer_llama3.tiktoken \
     tokenizer_type=tiktoken \
     weight_dtype=float32 \
-    sparse_matmul=False \
-    packing=False \
-    remat_policy=minimal_flash
+    sparse_matmul=false \
+    packing=false \
+    remat_policy=minimal_with_context
 
     # quantization=fp8
 
