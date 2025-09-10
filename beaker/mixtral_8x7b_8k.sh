@@ -48,7 +48,7 @@ python3 -m MaxText.train MaxText/configs/base.yml model_name=mixtral-8x7b hardwa
     ici_fsdp_parallelism=-1 \
     max_target_length=8192 \
     per_device_batch_size=4 \
-    megablox=False \
+    megablox=false \
     reuse_example_batch=1 \
     steps=120 \
     tokenizer_path=assets/tokenizer.mistral-v1 \
@@ -56,7 +56,7 @@ python3 -m MaxText.train MaxText/configs/base.yml model_name=mixtral-8x7b hardwa
     sparse_matmul=false \
     packing=false \
     scan_layers=true \
-    use_iota_embed=true \
+    use_iota_embed=false \
     remat_policy=minimal_with_context
 
     # quantization=fp8
