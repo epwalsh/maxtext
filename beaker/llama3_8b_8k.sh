@@ -54,7 +54,7 @@ python3 -m MaxText.train MaxText/configs/base.yml \
     dtype=bfloat16 \
     enable_checkpointing=false \
     ici_fsdp_parallelism=8 \
-    max_target_length=4096 \
+    max_target_length=1024 \
     per_device_batch_size=1 \
     reuse_example_batch=1 \
     steps=120 \
