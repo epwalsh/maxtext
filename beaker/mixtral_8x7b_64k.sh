@@ -59,7 +59,7 @@ python3 -m MaxText.train MaxText/configs/base.yml model_name=mixtral-8x7b hardwa
     packing=false \
     scan_layers=true \
     use_iota_embed=true \
-    remat_policy=minimal_with_context
+    remat_policy=full
 
     # quantization=fp8
 
