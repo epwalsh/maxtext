@@ -11,7 +11,7 @@ script="${1:-beaker/llama3_8b_8k.sh}"
 
 name=$(basename "$script")
 # Remove file extension for naming.
-name="${script%.*}"
+name="${name%.*}"
 # Replace slashes in path with dashes.
 name="${name//\//-}"
 # Replace underscores with dashes for run name.
