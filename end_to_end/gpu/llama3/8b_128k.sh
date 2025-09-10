@@ -66,12 +66,12 @@ python3 -m MaxText.train MaxText/configs/base.yml \
     dcn_fsdp_parallelism=1 \
     dcn_pipeline_parallelism=-1 \
     num_layers_per_pipeline_stage=2 \
-    num_pipeline_microbatches=4 \
+    num_pipeline_microbatches=-1 \
     ici_fsdp_parallelism=1 \
     ici_context_parallelism=8 \
     context_parallel_strategy=ring \
     max_target_length=131072 \
-    per_device_batch_size=1 \
+    per_device_batch_size=0.25 \
     reuse_example_batch=1 \
     steps=120 \
     tokenizer_path=assets/tokenizer_llama3.tiktoken \
