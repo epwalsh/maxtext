@@ -23,6 +23,7 @@ gantry run \
     --show-logs \
     --yes \
     --name="${name}-$(date +%Y%m%d-%H%M%S)" \
+    --workspace=ai2/google_benchmarks \
     --description="MaxText ${name}" \
     --group=petew/B200_benchmarks \
     --group="petew/B200_benchmarks_${group_name}" \
