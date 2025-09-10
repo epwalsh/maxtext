@@ -61,7 +61,7 @@ python3 -m MaxText.train MaxText/configs/base.yml \
     attention=cudnn_flash_te \
     dtype=bfloat16 \
     enable_checkpointing=false \
-    sharding_tolerance: 0.05 \
+    sharding_tolerance=0.05 \
     dcn_data_parallelism=1 \
     dcn_fsdp_parallelism=1 \
     dcn_pipeline_parallelism=-1 \
