@@ -55,7 +55,7 @@ python3 -m MaxText.train MaxText/configs/base.yml model_name=mixtral-8x7b hardwa
     weight_dtype=bfloat16 \
     sparse_matmul=false \
     packing=false \
-    scan_layers=false \
+    scan_layers=true \
     use_iota_embed=true \
     remat_policy=minimal_with_context
 
