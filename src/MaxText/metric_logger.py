@@ -21,6 +21,8 @@ import os
 import queue
 
 import numpy as np
+import gantry.api
+from beaker import Beaker
 
 import jax
 
@@ -62,6 +64,45 @@ def record_activation_metrics(output_metrics, intermediate_outputs, config):
       output_metrics["scalar"][f"activ_stdev/layer_{layer_num:03d}"] = layer["activation_stdev"][0]
 
 
+class RunningAverage:
+  """
+  Computes an online running average (and variance) using Welford's algorithm.
+  """
+
+  def __init__(self):
+    self.mean = 0.0
+    self.m2 = 0.0
+    self.count = 0
+
+  def update(self, value: float) -> float:
+    delta = value - self.mean
+    self.mean += delta / (self.count + 1)
+    delta2 = value - self.mean
+    self.m2 += delta * delta2
+    self.count += 1
+    return self.mean
+
+  def get(self) -> float:
+    if self.count == 0:
+        raise ZeroDivisionError
+    return self.mean
+
+  def get_variance(self) -> float:
+    if self.count < 2:
+        raise ZeroDivisionError
+    return self.m2 / self.count
+
+  def get_sample_variance(self) -> float:
+    if self.count < 2:
+        raise ZeroDivisionError
+    return self.m2 / (self.count - 1)
+
+  def reset(self):
+    self.mean = 0.0
+    self.m2 = 0.0
+    self.count = 0
+
+
 class MetricLogger:
   """
   Logger for saving metrics to a local file, GCS and TensorBoard.
@@ -76,6 +117,12 @@ class MetricLogger:
     self.learning_rate_schedule = learning_rate_schedule
     self.cumulative_eval_metrics = {"scalar": defaultdict(float)}
     self.buffered_train_metrics = None
+    self.tps_running_average = RunningAverage()
+    self.running_in_beaker = False
+    self.beaker = None
+    if os.environ.get("BEAKER_TOKEN") and os.environ.get("BEAKER_WORKLOAD_ID") is not None:
+      self.running_in_beaker = True
+      self.beaker = Beaker.from_env(check_for_upgrades=False)
 
   def reset_eval_metrics(self):
     """Resets the cumulative metrics dictionary for a new evaluation run."""
@@ -94,6 +141,22 @@ class MetricLogger:
 
       if self.config.gcs_metrics and jax.process_index() == 0:
         self.write_metrics_for_gcs(metrics, step, is_training)
+
+      if self.running_in_beaker and jax.process_index() == 0:
+        self.write_metrics_to_beaker(metrics, step, is_training)
+
+  def write_metrics_to_beaker(self, metrics, step, is_training):
+    assert self.beaker is not None
+    if is_training and (step + 1) % 10 == 0 and "perf/per_device_tokens_per_sec_avg" in metrics["scalar"]:
+      gantry.api.update_workload_description(
+        f"({int(metrics['scalar']['perf/per_device_tokens_per_sec_avg']):,d} TPS)",
+        "append",
+        client=self.beaker,
+      )
+      gantry.api.write_metrics({
+        "TPS": int(metrics["scalar"]["perf/per_device_tokens_per_sec_avg"]),
+        "loss": float(metrics['scalar']['learning/loss']),
+      })
 
   def log_metrics(self, metrics, step, is_training):
     """Logs metrics via max_logging."""
@@ -273,3 +336,6 @@ class MetricLogger:
       self.write_metrics(metrics_to_write, step_to_write)
 
     max_utils.close_summary_writer(self.writer)
+    if self.beaker is not None:
+      self.beaker.close()
+      self.beaker = None
