@@ -47,7 +47,7 @@ gantry run \
     "${GANTRY_MULTI_NODE_ARGS[@]}" \
     --gpu-type=h100 \
     --gpus=8 -- \
-    "./end_to_end/gpu/${script}"
+    "${script}"
 
     # --replicas=2 \
     # --leader-selection \
