@@ -23,7 +23,7 @@ export XLA_FLAGS="--xla_gpu_enable_latency_hiding_scheduler=true
  --xla_gpu_enable_while_loop_double_buffering=true
  --xla_gpu_enable_all_gather_combine_by_dim=false
  --xla_gpu_enable_reduce_scatter_combine_by_dim=false
- --xla_disable_hlo_passes=rematerialization"
+ --xla_disable_hlo_passes="
 
 # Threshold settings from mixtral config:
 # --xla_gpu_all_reduce_combine_threshold_bytes=71303168
@@ -63,7 +63,7 @@ python3 -m MaxText.train MaxText/configs/base.yml \
     weight_dtype=float32 \
     sparse_matmul=false \
     packing=false \
-    remat_policy=minimal_with_context
+    remat_policy=minimal
 
     # quantization=fp8
 
