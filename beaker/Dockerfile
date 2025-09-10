@@ -7,7 +7,7 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 # Install direct dependencies, but not source code.
 WORKDIR /stage
 COPY requirements.txt .
-RUN pip uninstall -y jax-cuda13-pjrt jax-cuda13-plugin && \
+RUN pip uninstall -y jax-cuda13-pjrt jax-cuda13-plugin jax jaxlib && \
     /root/.local/bin/uv pip install  --system --break-system-packages -r requirements.txt && \
     rm -rf *
 
