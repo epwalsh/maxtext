@@ -60,6 +60,8 @@ uv pip install --system --break-system-packages \
     "jaxlib>=0.7.0" \
     "jaxtyping>=0.3.2"
 
+echo "Launching trainer..."
+
 python3 -m MaxText.train MaxText/configs/base.yml \
     model_name=llama3-8b \
     hardware=gpu \
