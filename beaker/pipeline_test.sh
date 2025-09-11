@@ -88,6 +88,7 @@ python3 -m MaxText.train MaxText/configs/base.yml \
     sparse_matmul=false \
     packing=false \
     scan_layers=false \
+    scan_pipeline_iterations=false \
     use_iota_embed=true \
     remat_policy=minimal_with_context
 
