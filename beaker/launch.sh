@@ -40,6 +40,7 @@ gantry run \
     --priority=urgent \
     --task-timeout=120m \
     --slack-webhook-url="$SLACK_WEBHOOK_URL" \
+    --env='PYTHONUNBUFFERED=1' \
     --env='JAX_PLATFORMS=cuda' \
     --env-secret='GOOGLE_CREDENTIALS=GOOGLE_CREDENTIALS' \
     --env-secret='BEAKER_TOKEN' \
