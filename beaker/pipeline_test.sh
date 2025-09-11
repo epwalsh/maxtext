@@ -46,19 +46,19 @@ if [[ -n "$BEAKER_REPLICA_COUNT" ]]; then
     export JAX_COORDINATOR_PORT=29400
 fi
 
-pip uninstall -y \
-    jax-cuda13-pjrt \
-    jax-cuda13-plugin \
-    jax \
-    jaxlib \
-    jaxtyping
+# pip uninstall -y \
+#     jax-cuda13-pjrt \
+#     jax-cuda13-plugin \
+#     jax \
+#     jaxlib \
+#     jaxtyping
 
-uv pip install --system --break-system-packages \
-    jax-cuda12-pjrt \
-    jax-cuda12-plugin \
-    "jax[cuda12]>=0.7.0" \
-    "jaxlib>=0.7.0" \
-    "jaxtyping>=0.3.2"
+# uv pip install --system --break-system-packages \
+#     jax-cuda12-pjrt \
+#     jax-cuda12-plugin \
+#     "jax[cuda12]>=0.7.0" \
+#     "jaxlib>=0.7.0" \
+#     "jaxtyping>=0.3.2"
 
 echo "Launching trainer..."
 
