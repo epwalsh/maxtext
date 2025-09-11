@@ -46,8 +46,9 @@ gantry run \
     --env-secret='BEAKER_TOKEN' \
     --beaker-image=petew/maxtext \
     --system-python \
-    --post-setup=beaker/patch_fused_attention.sh \
     "${GANTRY_MULTI_NODE_ARGS[@]}" \
     --gpu-type="$gpu_type" \
     --gpus=8 -- \
     "${script}"
+
+    # --post-setup=beaker/patch_fused_attention.sh \
